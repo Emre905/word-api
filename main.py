@@ -172,7 +172,10 @@ def list_notes(
     if search:
         pattern = f"%{search}%"
         q = q.filter(
-            Note.title.ilike(pattern) | Note.note_text.ilike(pattern) | Note.tags.ilike(pattern)
+            Note.title.ilike(pattern)
+            | Note.meaning.ilike(pattern)
+            | Note.note_text.ilike(pattern)
+            | Note.tags.ilike(pattern)
         )
     return q.order_by(Note.created_at.desc()).all()
 

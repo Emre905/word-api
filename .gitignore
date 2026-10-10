@@ -12,4 +12,4 @@ uv.lock
 .venv
 
 # Database
-data/notes_app.db
+# data/notes_app.db

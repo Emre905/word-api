@@ -931,6 +931,14 @@ body {
   text-overflow: ellipsis;
 }
 
+.notes-table .td-meaning {
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .notes-table .td-note {
   color: var(--text-secondary);
   max-width: 280px;

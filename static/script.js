@@ -33,6 +33,7 @@ const noteForm = $("#noteForm");
 const modalTitle = $("#modalTitle");
 const noteId = $("#noteId");
 const noteTitle = $("#noteTitle");
+const noteMeaning = $("#noteMeaning");
 const noteCategory = $("#noteCategory");
 const noteSubCategory = $("#noteSubCategory");
 const notePriority = $("#notePriority");
@@ -296,6 +297,7 @@ function renderNotesTable() {
         <button class="delete-note" title="Delete">&times;</button>
       </td>
       <td class="td-title">${esc(n.title)}${n.is_archived ? ' <span class="archived-badge">archived</span>' : ''}</td>
+      <td class="td-meaning">${esc(n.meaning)}</td>
       <td class="td-note">${esc(preview)}${n.note_text.length > 120 ? "…" : ""}</td>
       <td class="td-cat">${esc(catSub)}</td>
       <td class="td-priority"><span class="priority-badge">${n.priority}</span></td>
@@ -337,6 +339,7 @@ function renderNotesCards() {
     const tags = (n.tags || "").split(",").filter(Boolean).map((t) => `<span class="tag">${esc(t.trim())}</span>`).join("");
     return `<div class="note-card ${pClass}${n.is_archived ? ' archived' : ''}" data-id="${n.id}" style="border-left:3px solid ${n.color || 'transparent'}">
       <div class="card-title">${esc(n.title)}${n.is_archived ? ' <span class="archived-badge">archived</span>' : ''}</div>
+      <div class="card-meaning">${esc(n.meaning)}</div>
       <div class="card-preview">${esc(preview)}</div>
       <div class="card-meta">
         <span class="priority-badge">${n.priority}</span>
@@ -392,6 +395,7 @@ async function openNoteModal(id = null) {
     noteId.value = note.id;
     modalTitle.textContent = "Edit Note — " + note.title;
     noteTitle.value = note.title;
+    noteMeaning.value = note.meaning;
     noteCategory.value = note.category_id || "";
     await populateSubCategoryDropdown(note.category_id);
     noteSubCategory.value = note.sub_category_id || "";
@@ -435,6 +439,7 @@ noteForm.addEventListener("submit", async (e) => {
 
   const payload = {
     title: noteTitle.value.trim(),
+    meaning: noteMeaning.value.trim(),
     note_text: noteText.value.trim(),
     note_date: noteDate.value,
     priority: notePriority.value,

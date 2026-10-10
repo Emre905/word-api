@@ -43,6 +43,7 @@ class Note(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), nullable=False)
+    meaning = Column(String(200), nullable=False)
     note_text = Column(Text, nullable=False)
     priority = Column(
         SQLEnum("low", "medium", "high", name="priorityenum", create_type=False),

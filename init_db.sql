@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS sub_categories (
 CREATE TABLE IF NOT EXISTS notes (
     id SERIAL PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
+    meaning VARCHAR(200) NOT NULL,
     note_text TEXT NOT NULL,
     priority priorityenum DEFAULT 'medium',
     is_archived BOOLEAN DEFAULT FALSE,

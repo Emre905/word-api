@@ -28,6 +28,7 @@ A sleek, modern notes-taking application built with **FastAPI** (backend) and va
 | Field         | Type    | Description                                |
 | ------------- | ------- | ------------------------------------------ |
 | `title`       | string  | Descriptive title for quick identification |
+| `meaning`     | string  | Meaning of word                            |
 | `priority`    | enum    | `low`, `medium`, `high`                    |
 | `is_archived` | boolean | Archive instead of delete                  |
 | `tags`        | string  | Comma-separated tags for organization      |

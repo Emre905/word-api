@@ -57,6 +57,7 @@ class SubCategoryResponse(SubCategoryBase):
 
 class NoteBase(BaseModel):
     title: str
+    meaning: str
     note_text: str
     priority: PriorityEnum = PriorityEnum.MEDIUM
     is_archived: bool = False
@@ -80,6 +81,7 @@ class NoteCreate(NoteBase):
 
 class NoteUpdate(BaseModel):
     title: Optional[str] = None
+    meaning: Optional[str] = None
     note_text: Optional[str] = None
     priority: Optional[PriorityEnum] = None
     is_archived: Optional[bool] = None
