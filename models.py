@@ -65,20 +65,4 @@ class Note(Base):
 
     category = relationship("Category", back_populates="notes")
     sub_category = relationship("SubCategory", back_populates="notes")
-    images = relationship("NoteImage", back_populates="note", cascade="all, delete-orphan")
 
-
-class NoteImage(Base):
-    __tablename__ = "note_images"
-
-    id = Column(Integer, primary_key=True, index=True)
-    note_id = Column(Integer, ForeignKey("notes.id", ondelete="CASCADE"), nullable=False)
-    filename = Column(String(255), nullable=False)
-    filepath = Column(String(512), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    note = relationship("Note", back_populates="images")
-
-    @property
-    def url(self):
-        return f"/uploads/{os.path.basename(self.filepath)}"

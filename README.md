@@ -1,14 +1,11 @@
 # Notes Application
 
-Notes taking application. **Create** and **store** notes with **images**. It allows **searching** notes along side.
-
 A sleek, modern notes-taking application built with **FastAPI** (backend) and vanilla **HTML/CSS/JavaScript** (frontend), backed by **SQLite**.
 
 ## Features
 
 - **Categories & Sub-Categories** — Organize notes hierarchically
-- **Rich Note Fields** — Title, text, priority (Low/Medium/High), tags, color labels, images, archived flag
-- **Image Attachments** — Upload multiple images per note, with drag-and-drop support, thumbnail previews, and click-to-enlarge lightbox
+- **Rich Note Fields** — Title, text, priority (Low/Medium/High), tags, color labels, archived flag
 - **Auto Date** — Current date is pre-filled when creating a note
 - **Full CRUD** — Create, read, update, and archive/delete notes
 - **Search & Filter** — Filter by category, sub-category, priority, archived status, or full-text search on title + body + tags
@@ -26,7 +23,7 @@ A sleek, modern notes-taking application built with **FastAPI** (backend) and va
 | Frontend | HTML5, CSS3 (custom properties), Vanilla JS |
 | Database | SQLite                                      |
 
-## Additional Note Fields 
+## Additional Note Fields
 
 | Field         | Type    | Description                                |
 | ------------- | ------- | ------------------------------------------ |
@@ -35,7 +32,6 @@ A sleek, modern notes-taking application built with **FastAPI** (backend) and va
 | `is_archived` | boolean | Archive instead of delete                  |
 | `tags`        | string  | Comma-separated tags for organization      |
 | `color`       | string  | Hex color for visual categorization        |
-| `images`      | array   | Attached image files (uploaded via modal)  |
 
 ## Getting Started
 
@@ -75,7 +71,7 @@ Both features are accessible from the **Backup** section in the sidebar. Click t
 
 ### Download Backup
 
-Click **Download** to download the SQLite database file (`notes_backup_YYYY-MM-DD.db`). This is a complete snapshot of all your notes, categories, and image metadata.
+Click **Download** to download the SQLite database file (`notes_backup_YYYY-MM-DD.db`). This is a complete snapshot of all your notes, categories, and metadata.
 
 ### Restore Backup
 
@@ -89,12 +85,11 @@ Click **Restore** and select a previous `.db` backup file to replace the current
 notes_app/
 ├── main.py              # FastAPI application & routes
 ├── database.py          # SQLAlchemy engine & session
-├── models.py            # ORM models (Category, SubCategory, Note, NoteImage)
+├── models.py            # ORM models (Category, SubCategory, Note)
 ├── schemas.py           # Pydantic request/response schemas
 ├── requirements.txt
 ├── README.md
 ├── data/                # SQLite database file (auto-created)
-├── uploads/             # User-uploaded images (auto-created)
 ├── templates/
 │   └── index.html       # Single-page application UI
 └── static/
@@ -138,40 +133,15 @@ notes_app/
 | created_at      | timestamp           |
 | updated_at      | timestamp           |
 
-### note_images
-| Column     | Type            |
-| ---------- | --------------- |
-| id         | PK              |
-| note_id    | FK → notes      |
-| filename   | varchar(255)    |
-| filepath   | varchar(512)    |
-| created_at | timestamp       |
-
-## Image Attachments
-
-Images can be uploaded when creating or editing a note:
-
-1. Open the note modal (click **+ New Note** or the edit icon on any note)
-2. In the **Images** section, click the upload area or drag-and-drop image files
-3. Thumbnails appear immediately in the grid; pending uploads are shown until saved
-4. Click **Save** — the note is created/updated and all pending images are uploaded
-5. Click any thumbnail in the grid to open a full-size lightbox preview
-6. Hover over a thumbnail and click **&times;** to remove an image
-
-Images are stored on disk in the `uploads/` directory and served via `/uploads/`. The `note_images` table tracks the mapping between notes and their files.
-
 ## API Endpoints
 
-| Method | Path                                   | Description                 |
-| ------ | -------------------------------------- | --------------------------- |
-| GET    | `/api/notes`                           | List notes (with filters)   |
-| POST   | `/api/notes`                           | Create a note               |
-| GET    | `/api/notes/{id}`                      | Get a single note           |
-| PUT    | `/api/notes/{id}`                      | Update a note               |
-| DELETE | `/api/notes/{id}`                      | Delete a note               |
-| GET    | `/api/notes/{id}/images`               | List images for a note      |
-| POST   | `/api/notes/{id}/images`               | Upload images (multipart)   |
-| DELETE | `/api/notes/{id}/images/{image_id}`    | Delete a single image       |
+| Method | Path                  | Description               |
+| ------ | --------------------- | ------------------------- |
+| GET    | `/api/notes`          | List notes (with filters) |
+| POST   | `/api/notes`          | Create a note             |
+| GET    | `/api/notes/{id}`     | Get a single note         |
+| PUT    | `/api/notes/{id}`     | Update a note             |
+| DELETE | `/api/notes/{id}`     | Delete a note             |
 
 ## License
 

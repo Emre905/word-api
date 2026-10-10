@@ -40,17 +40,10 @@ const noteDate = $("#noteDate");
 const noteColor = $("#noteColor");
 const noteTags = $("#noteTags");
 const noteText = $("#noteText");
-const imageGrid = $("#imageGrid");
-const imageInput = $("#imageInput");
-const imageUploadArea = $("#imageUploadArea");
 const modalClose = $("#modalClose");
 const modalCancel = $("#modalCancel");
 const modalPrev = $("#modalPrev");
 const modalNext = $("#modalNext");
-
-const lightbox = $("#imageLightbox");
-const lightboxImage = $("#lightboxImage");
-const lightboxClose = $("#lightboxClose");
 
 const categoryModal = $("#categoryModal");
 const categoryForm = $("#categoryForm");
@@ -291,9 +284,6 @@ function renderNotesTable() {
     const catSub = [cat?.name, sub?.name].filter(Boolean).join(" / ") || "—";
     const preview = n.note_text.replace(/<[^>]*>/g, "").substring(0, 120);
     const tags = (n.tags || "").split(",").filter(Boolean).map((t) => `<span class="tag">${esc(t.trim())}</span>`).join("");
-    const thumbs = (n.images || []).slice(0, 3).map((img) =>
-      `<img class="image-preview-thumb" src="${esc(img.url)}" alt="" loading="lazy">`
-    ).join("");
     return `<tr class="priority-${n.priority}${n.is_archived ? ' archived' : ''}" data-id="${n.id}" data-title="${esc(n.title)}">
       <td class="td-actions">
         <button class="archive-note" title="${n.is_archived ? 'Restore' : 'Archive'}">${n.is_archived ? '&#x21B6;' : '&#x1F4E5;'}</button>
@@ -305,7 +295,7 @@ function renderNotesTable() {
         </button>
         <button class="delete-note" title="Delete">&times;</button>
       </td>
-      <td class="td-title">${thumbs} ${esc(n.title)}${n.is_archived ? ' <span class="archived-badge">archived</span>' : ''}</td>
+      <td class="td-title">${esc(n.title)}${n.is_archived ? ' <span class="archived-badge">archived</span>' : ''}</td>
       <td class="td-note">${esc(preview)}${n.note_text.length > 120 ? "…" : ""}</td>
       <td class="td-cat">${esc(catSub)}</td>
       <td class="td-priority"><span class="priority-badge">${n.priority}</span></td>
@@ -345,13 +335,9 @@ function renderNotesCards() {
     const pClass = `priority-${n.priority}`;
     const preview = n.note_text.replace(/<[^>]*>/g, "").substring(0, 150);
     const tags = (n.tags || "").split(",").filter(Boolean).map((t) => `<span class="tag">${esc(t.trim())}</span>`).join("");
-    const thumbs = (n.images || []).slice(0, 2).map((img) =>
-      `<img class="image-preview-thumb" src="${esc(img.url)}" alt="" loading="lazy">`
-    ).join("");
-    const extraCount = (n.images || []).length - 2;
     return `<div class="note-card ${pClass}${n.is_archived ? ' archived' : ''}" data-id="${n.id}" style="border-left:3px solid ${n.color || 'transparent'}">
       <div class="card-title">${esc(n.title)}${n.is_archived ? ' <span class="archived-badge">archived</span>' : ''}</div>
-      <div class="card-preview">${thumbs ? '<div class="card-thumbs">' + thumbs + (extraCount > 0 ? `<span class="card-thumbs-more">+${extraCount}</span>` : '') + '</div>' : ''}${esc(preview)}</div>
+      <div class="card-preview">${esc(preview)}</div>
       <div class="card-meta">
         <span class="priority-badge">${n.priority}</span>
         <span class="date">${n.note_date}</span>
@@ -416,10 +402,8 @@ async function openNoteModal(id = null) {
     noteText.value = note.note_text;
 
     currentNoteIndex = state.notes.findIndex((n) => n.id === id);
-    await loadNoteImages(note.id);
   } else {
     currentNoteIndex = -1;
-    imageGrid.innerHTML = "";
     if (state.selectedCategoryId) {
       noteCategory.value = state.selectedCategoryId;
       await populateSubCategoryDropdown(state.selectedCategoryId);
@@ -446,80 +430,6 @@ function closeNoteModal() {
   noteModal.classList.remove("active");
 }
 
-/* ── Note Images ──────────────────────────────────────────────────────────── */
-let pendingImageFiles = [];
-
-async function loadNoteImages(noteId) {
-  imageGrid.innerHTML = "";
-  pendingImageFiles = [];
-  try {
-    const images = await api.get(`/api/notes/${noteId}/images`);
-    images.forEach((img) => addImageToGrid(img.url, img.filename, img.id));
-  } catch {
-    // no images yet
-  }
-}
-
-function addImageToGrid(url, filename, imageId = null) {
-  const div = document.createElement("div");
-  div.className = "image-item";
-  div.innerHTML = `
-    <img src="${url}" alt="${esc(filename)}" loading="lazy">
-    <button class="image-delete" title="Remove image">&times;</button>
-  `;
-  const imgEl = div.querySelector("img");
-  imgEl.addEventListener("click", (e) => {
-    e.stopPropagation();
-    lightboxImage.src = url;
-    lightbox.classList.add("active");
-  });
-
-  const delBtn = div.querySelector(".image-delete");
-  delBtn.addEventListener("click", async (e) => {
-    e.stopPropagation();
-    if (imageId) {
-      if (!confirm("Delete this image?")) return;
-      await api.del(`/api/notes/${noteId.value}/images/${imageId}`);
-    }
-    div.remove();
-    if (!imageId) {
-      const idx = pendingImageFiles.findIndex((f) => f.name === filename);
-      if (idx >= 0) pendingImageFiles.splice(idx, 1);
-    }
-  });
-  imageGrid.appendChild(div);
-}
-
-imageUploadArea.addEventListener("click", () => imageInput.click());
-
-imageInput.addEventListener("change", () => {
-  for (const file of imageInput.files) {
-    if (!file.type.startsWith("image/")) continue;
-    pendingImageFiles.push(file);
-    const url = URL.createObjectURL(file);
-    addImageToGrid(url, file.name);
-  }
-  imageInput.value = "";
-});
-
-imageUploadArea.addEventListener("dragover", (e) => {
-  e.preventDefault();
-  imageUploadArea.classList.add("drag-over");
-});
-imageUploadArea.addEventListener("dragleave", () => {
-  imageUploadArea.classList.remove("drag-over");
-});
-imageUploadArea.addEventListener("drop", (e) => {
-  e.preventDefault();
-  imageUploadArea.classList.remove("drag-over");
-  for (const file of e.dataTransfer.files) {
-    if (!file.type.startsWith("image/")) continue;
-    pendingImageFiles.push(file);
-    const url = URL.createObjectURL(file);
-    addImageToGrid(url, file.name);
-  }
-});
-
 noteForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -540,13 +450,6 @@ noteForm.addEventListener("submit", async (e) => {
   } else {
     const created = await api.post("/api/notes", payload);
     noteId.value = created.id;
-  }
-
-  if (pendingImageFiles.length > 0 && noteId.value) {
-    const formData = new FormData();
-    pendingImageFiles.forEach((f) => formData.append("files", f));
-    await fetch(`/api/notes/${noteId.value}/images`, { method: "POST", body: formData });
-    pendingImageFiles = [];
   }
 
   closeNoteModal();
@@ -614,11 +517,6 @@ document.getElementById("categoryModalClose")?.addEventListener("click", () => c
 document.getElementById("categoryModalCancel")?.addEventListener("click", () => closeModal(categoryModal));
 document.getElementById("subCategoryModalClose")?.addEventListener("click", () => closeModal(subCategoryModal));
 document.getElementById("subCategoryModalCancel")?.addEventListener("click", () => closeModal(subCategoryModal));
-
-lightboxClose.addEventListener("click", () => closeModal(lightbox));
-lightbox.addEventListener("click", (e) => {
-  if (e.target === lightbox) closeModal(lightbox);
-});
 
 document.querySelectorAll(".modal-overlay").forEach((ov) => {
   ov.addEventListener("click", (e) => {

@@ -97,20 +97,9 @@ class NoteUpdate(BaseModel):
         return v
 
 
-class NoteImageResponse(BaseModel):
-    id: int
-    note_id: int
-    filename: str
-    url: str
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
 class NoteResponse(NoteBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    images: list[NoteImageResponse] = []
 
     model_config = {"from_attributes": True}

@@ -10,3 +10,6 @@ uv.lock
 
 # Virtual environments
 .venv
+
+# Database
+data/notes_app.db
