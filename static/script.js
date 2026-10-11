@@ -408,11 +408,12 @@ async function openNoteModal(id = null) {
     currentNoteIndex = state.notes.findIndex((n) => n.id === id);
   } else {
     currentNoteIndex = -1;
-    if (state.selectedCategoryId) {
-      noteCategory.value = state.selectedCategoryId;
-      await populateSubCategoryDropdown(state.selectedCategoryId);
-      if (state.selectedSubCategoryId) noteSubCategory.value = state.selectedSubCategoryId;
-    }
+    state.selectedCategoryId = null;
+    state.selectedSubCategoryId = null;
+    const defaultCategory = await ensureCategoryByName("noun");
+    noteCategory.value = String(defaultCategory.id);
+    await populateSubCategoryDropdown(defaultCategory.id);
+    noteSubCategory.value = "";
   }
 
   updateNavButtons();
@@ -434,18 +435,84 @@ function closeNoteModal() {
   noteModal.classList.remove("active");
 }
 
+async function ensureCategoryByName(name) {
+  const existing = state.categories.find((cat) => cat.name.toLowerCase() === name.toLowerCase());
+  if (existing) return existing;
+
+  const created = await api.post("/api/categories", {
+    name,
+    description: `Auto-created from default note behavior`,
+  });
+
+  state.categories.push(created);
+  renderCategories();
+  populateCategoryDropdowns();
+  return created;
+}
+
+async function syncVerbCategoryPreview() {
+  const meaningValue = noteMeaning.value.trim();
+  if (!/^to\s+/i.test(meaningValue)) {
+    if (!noteCategory.value || noteCategory.value === "") {
+      const nounCategory = await ensureCategoryByName("noun");
+      noteCategory.value = String(nounCategory.id);
+    }
+    return;
+  }
+
+  let verbCategory = state.categories.find((cat) => cat.name.toLowerCase() === "verb");
+  if (!verbCategory) {
+    verbCategory = await ensureCategoryByName("verb");
+  }
+
+  if (noteCategory) {
+    populateCategoryDropdown(noteCategory);
+  }
+
+  noteCategory.value = String(verbCategory.id);
+  if (state.selectedCategoryId !== verbCategory.id) {
+    state.selectedCategoryId = verbCategory.id;
+  }
+}
+
+async function ensureVerbCategory() {
+  return ensureCategoryByName("verb");
+}
+
+noteMeaning.addEventListener("input", async () => {
+  const meaningValue = noteMeaning.value.trim();
+  if (!/^to\s+/i.test(meaningValue)) {
+    if (!noteCategory.value || noteCategory.value === "") {
+      const nounCategory = await ensureCategoryByName("noun");
+      noteCategory.value = String(nounCategory.id);
+    }
+    return;
+  }
+  await syncVerbCategoryPreview();
+});
+
 noteForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  const meaningValue = noteMeaning.value.trim();
+  let selectedCategoryId = noteCategory.value ? parseInt(noteCategory.value) : null;
+
+  if (/^to\s+/i.test(meaningValue)) {
+    const verbCategory = await ensureVerbCategory();
+    selectedCategoryId = verbCategory.id;
+    noteCategory.value = String(selectedCategoryId);
+    state.selectedCategoryId = selectedCategoryId;
+  }
+
   const payload = {
     title: noteTitle.value.trim(),
-    meaning: noteMeaning.value.trim(),
+    meaning: meaningValue,
     note_text: noteText.value.trim(),
     note_date: noteDate.value,
     priority: notePriority.value,
     color: noteColor.value,
     tags: noteTags.value.trim(),
-    category_id: noteCategory.value ? parseInt(noteCategory.value) : null,
+    category_id: selectedCategoryId,
     sub_category_id: noteSubCategory.value ? parseInt(noteSubCategory.value) : null,
   };
 
@@ -457,6 +524,10 @@ noteForm.addEventListener("submit", async (e) => {
     noteId.value = created.id;
   }
 
+  state.selectedCategoryId = null;
+  state.selectedSubCategoryId = null;
+  noteCategory.value = "";
+  noteSubCategory.value = "";
   closeNoteModal();
   loadNotes();
 });
