@@ -32,6 +32,12 @@ const noteModal = $("#noteModal");
 const noteForm = $("#noteForm");
 const modalTitle = $("#modalTitle");
 const noteId = $("#noteId");
+const singleNoteFields = $("#singleNoteFields");
+const bulkNoteFields = $("#bulkNoteFields");
+const bulkCsvInput = $("#bulkCsvInput");
+const bulkWithHeader = $("#bulkWithHeader");
+const bulkPreview = $("#bulkPreview");
+const bulkPreviewRows = $("#bulkPreviewRows");
 const noteTitle = $("#noteTitle");
 const noteMeaning = $("#noteMeaning");
 const noteCategory = $("#noteCategory");
@@ -274,6 +280,13 @@ function renderNotes() {
   else renderNotesCards();
 }
 
+function formatDisplayDate(value) {
+  if (!value) return "—";
+  const text = String(value).split("T")[0];
+  if (!text) return "—";
+  return text;
+}
+
 function renderNotesTable() {
   const hasNotes = state.notes.length > 0;
   notesBody.style.display = hasNotes ? "" : "none";
@@ -301,7 +314,7 @@ function renderNotesTable() {
       <td class="td-note">${esc(preview)}${n.note_text.length > 120 ? "…" : ""}</td>
       <td class="td-cat">${esc(catSub)}</td>
       <td class="td-priority"><span class="priority-badge">${n.priority}</span></td>
-      <td class="td-date">${n.note_date}</td>
+      <td class="td-date">${formatDisplayDate(n.note_date)}</td>
       <td class="td-tags">${tags || "—"}</td>
     </tr>`;
   }).join("");
@@ -343,7 +356,7 @@ function renderNotesCards() {
       <div class="card-preview">${esc(preview)}</div>
       <div class="card-meta">
         <span class="priority-badge">${n.priority}</span>
-        <span class="date">${n.note_date}</span>
+        <span class="date">${formatDisplayDate(n.note_date)}</span>
         ${tags}
         <div class="card-actions">
           <button class="archive-card" title="${n.is_archived ? 'Restore' : 'Archive'}">${n.is_archived ? '&#x21B6;' : '&#x1F4E5;'}</button>
@@ -382,13 +395,105 @@ function renderNotesCards() {
 }
 
 /* ── Note Modal ────────────────────────────────────────────────────────────── */
+function parseBulkCsvPreview(rawText, withHeader) {
+  if (!rawText || !rawText.trim()) return [];
+
+  const rows = rawText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (!rows.length) return [];
+
+  const parsed = [];
+  const csvLines = rows.map((line) => {
+    const out = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i += 1) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i += 1;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === "," && !inQuotes) {
+        out.push(current);
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+    out.push(current);
+    return out.map((cell) => cell.trim());
+  });
+
+  const dataRows = withHeader ? csvLines.slice(1) : csvLines;
+  return dataRows.slice(0, 3).map((row) => {
+    const padded = [...row];
+    while (padded.length < 5) padded.push("");
+    return {
+      word: padded[0] || "—",
+      meaning: padded[1] || "—",
+      context: padded[2] || "—",
+      category: padded[3] || "—",
+      createdTime: padded[4] || "—",
+    };
+  });
+}
+
+function renderBulkCsvPreview() {
+  const value = bulkCsvInput.value.trim();
+  if (!value) {
+    bulkPreview.style.display = "none";
+    bulkPreviewRows.innerHTML = "";
+    return;
+  }
+
+  const previewRows = parseBulkCsvPreview(value, bulkWithHeader.checked);
+  if (!previewRows.length) {
+    bulkPreview.style.display = "none";
+    bulkPreviewRows.innerHTML = "";
+    return;
+  }
+
+  bulkPreviewRows.innerHTML = previewRows.map((row) => `
+    <tr>
+      <td style="padding:.75rem .8rem; border-bottom:1px solid var(--border);">${esc(row.word)}</td>
+      <td style="padding:.75rem .8rem; border-bottom:1px solid var(--border);">${esc(row.meaning)}</td>
+      <td style="padding:.75rem .8rem; border-bottom:1px solid var(--border);">${esc(row.context)}</td>
+      <td style="padding:.75rem .8rem; border-bottom:1px solid var(--border);">${esc(row.category)}</td>
+    </tr>
+  `).join("");
+  bulkPreview.style.display = "block";
+}
+
+function setNoteEntryMode(mode) {
+  const isBulk = mode === "bulk";
+  singleNoteFields.style.display = isBulk ? "none" : "block";
+  bulkNoteFields.style.display = isBulk ? "block" : "none";
+  noteTitle.required = !isBulk;
+  noteMeaning.required = !isBulk;
+  noteText.required = false;
+  bulkCsvInput.required = isBulk;
+  if (isBulk) {
+    renderBulkCsvPreview();
+  } else {
+    bulkPreview.style.display = "none";
+    bulkPreviewRows.innerHTML = "";
+  }
+  document.querySelectorAll('input[name="noteEntryMode"]').forEach((input) => {
+    input.checked = input.value === mode;
+  });
+}
+
 async function openNoteModal(id = null) {
   noteForm.reset();
   noteId.value = "";
+  bulkCsvInput.value = "";
   modalTitle.textContent = "New Note";
   noteDate.value = new Date().toISOString().split("T")[0];
   noteColor.value = "#4f46e5";
   notePriority.value = "medium";
+  setNoteEntryMode("single");
 
   if (id) {
     const note = await api.get(`/api/notes/${id}`);
@@ -404,6 +509,7 @@ async function openNoteModal(id = null) {
     noteColor.value = note.color || "#4f46e5";
     noteTags.value = note.tags || "";
     noteText.value = note.note_text;
+    setNoteEntryMode("single");
 
     currentNoteIndex = state.notes.findIndex((n) => n.id === id);
   } else {
@@ -491,8 +597,37 @@ noteMeaning.addEventListener("input", async () => {
   await syncVerbCategoryPreview();
 });
 
+document.querySelectorAll('input[name="noteEntryMode"]').forEach((input) => {
+  input.addEventListener("change", (e) => setNoteEntryMode(e.target.value));
+});
+bulkWithHeader.addEventListener("change", renderBulkCsvPreview);
+bulkCsvInput.addEventListener("input", renderBulkCsvPreview);
+
 noteForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  const selectedMode = document.querySelector('input[name="noteEntryMode"]:checked')?.value || "single";
+
+  if (selectedMode === "bulk") {
+    const csvText = bulkCsvInput.value.trim();
+    if (!csvText) {
+      alert("Paste CSV content to import multiple notes.");
+      return;
+    }
+
+    const previewRows = parseBulkCsvPreview(csvText, bulkWithHeader.checked);
+    if (previewRows.length === 0) {
+      alert("CSV preview is empty. Please check the pasted data.");
+      return;
+    }
+
+    await api.post("/api/notes/bulk", { csv: csvText, with_header: bulkWithHeader.checked });
+    state.selectedCategoryId = null;
+    state.selectedSubCategoryId = null;
+    closeNoteModal();
+    loadNotes();
+    return;
+  }
 
   const meaningValue = noteMeaning.value.trim();
   let selectedCategoryId = noteCategory.value ? parseInt(noteCategory.value) : null;

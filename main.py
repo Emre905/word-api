@@ -1,3 +1,5 @@
+import csv
+import io
 import os
 import shutil
 import tempfile
@@ -14,6 +16,7 @@ from sqlalchemy.orm import Session
 from database import DATA_DIR, DATABASE_URL, Base, engine, get_db
 from models import Category, Note, SubCategory
 from schemas import (
+    BulkNotesCreate,
     CategoryCreate,
     CategoryResponse,
     NoteCreate,
@@ -182,11 +185,154 @@ def list_notes(
 
 @app.post("/api/notes", response_model=NoteResponse, status_code=201)
 def create_note(payload: NoteCreate, db: Session = Depends(get_db)):
-    note = Note(**payload.model_dump())
+    data = payload.model_dump()
+    data["note_date"] = data.get("note_date") or date.today()
+    note = Note(**data)
     db.add(note)
     db.commit()
     db.refresh(note)
     return note
+
+
+def _parse_csv_note_date(raw_value: str) -> date:
+    value = (raw_value or "").strip()
+    if not value:
+        return date.today()
+
+    for fmt in (
+        "%Y-%m-%d",
+        "%m/%d/%Y",
+        "%B %d, %Y %I:%M %p",
+        "%b %d, %Y %I:%M %p",
+        "%Y/%m/%d",
+    ):
+        try:
+            return datetime.strptime(value, fmt).date()
+        except ValueError:
+            continue
+
+    try:
+        return datetime.fromisoformat(value).date()
+    except ValueError:
+        pass
+
+    return date.today()
+
+
+def _normalize_bulk_row(row: dict) -> dict:
+    normalized = {}
+    for key, value in (row or {}).items():
+        if key is None:
+            continue
+        normalized[key.strip().lstrip("\ufeff").lower()] = (value or "").strip()
+
+    title = (
+        normalized.get("word")
+        or normalized.get("title")
+        or normalized.get("word ")
+        or ""
+    )
+    meaning = normalized.get("meaning") or normalized.get("translation") or ""
+    note_text = (
+        normalized.get("context")
+        or normalized.get("note")
+        or normalized.get("note_text")
+        or ""
+    )
+    tags = normalized.get("category") or normalized.get("tags") or ""
+    created_time = (
+        normalized.get("created time")
+        or normalized.get("created_time")
+        or normalized.get("date")
+        or ""
+    )
+
+    return {
+        "title": title,
+        "meaning": meaning,
+        "note_text": note_text,
+        "tags": tags,
+        "note_date": _parse_csv_note_date(created_time),
+    }
+
+
+def _parse_bulk_csv(csv_text: str, with_header: bool) -> List[dict]:
+    rows: List[dict] = []
+    reader = csv.reader(io.StringIO(csv_text))
+    csv_rows = list(reader)
+
+    if not csv_rows:
+        raise HTTPException(400, "CSV content is required")
+
+    if with_header:
+        header = csv_rows[0]
+        if not any(cell.strip() for cell in header):
+            raise HTTPException(400, "CSV file is missing a header row")
+        data_rows = csv_rows[1:]
+        fieldnames = [cell.strip().lower() for cell in header]
+        for row in data_rows:
+            if not row or not any((cell or "").strip() for cell in row):
+                continue
+            row_dict = {fieldnames[i]: row[i] if i < len(row) else "" for i in range(len(fieldnames))}
+            rows.append(_normalize_bulk_row(row_dict))
+        return rows
+
+    for row_number, row in enumerate(csv_rows, start=1):
+        if not row or not any((cell or "").strip() for cell in row):
+            continue
+        if len(row) < 5:
+            padded = row + [""] * (5 - len(row))
+        else:
+            padded = row[:5]
+        row_dict = {
+            "word": padded[0],
+            "meaning": padded[1],
+            "context": padded[2],
+            "category": padded[3],
+            "created time": padded[4],
+        }
+        rows.append(_normalize_bulk_row(row_dict))
+    return rows
+
+
+@app.post("/api/notes/bulk", response_model=List[NoteResponse], status_code=201)
+def create_notes_bulk(payload: BulkNotesCreate, db: Session = Depends(get_db)):
+    csv_text = (payload.csv or "").strip()
+    if not csv_text:
+        raise HTTPException(400, "CSV content is required")
+
+    parsed_rows = _parse_bulk_csv(csv_text, payload.with_header)
+    if not parsed_rows:
+        raise HTTPException(400, "No valid notes were found in the CSV payload")
+
+    created_notes = []
+    for row_number, parsed in enumerate(parsed_rows, start=1):
+        title = (parsed.get("title") or "").strip()
+        meaning = (parsed.get("meaning") or "").strip()
+        note_text = (parsed.get("note_text") or "").strip()
+
+        if not title or not meaning:
+            raise HTTPException(
+                400,
+                f"Row {row_number} is missing a required value for title or meaning.",
+            )
+
+        note = Note(
+            title=title,
+            meaning=meaning,
+            note_text=note_text,
+            tags=(parsed.get("tags") or "").strip() or None,
+            note_date=parsed.get("note_date") or date.today(),
+            priority="medium",
+            color="#4f46e5",
+        )
+        db.add(note)
+        created_notes.append(note)
+
+    db.commit()
+    for note in created_notes:
+        db.refresh(note)
+    return created_notes
 
 
 @app.get("/api/notes/{note_id}", response_model=NoteResponse)

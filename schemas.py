@@ -58,14 +58,21 @@ class SubCategoryResponse(SubCategoryBase):
 class NoteBase(BaseModel):
     title: str
     meaning: str
-    note_text: str
+    note_text: Optional[str] = ""
     priority: PriorityEnum = PriorityEnum.MEDIUM
     is_archived: bool = False
     tags: Optional[str] = None
     color: Optional[str] = None
     category_id: Optional[int] = None
     sub_category_id: Optional[int] = None
-    note_date: date = date.today()
+    note_date: Optional[date] = None
+
+    @field_validator("note_date", mode="before")
+    @classmethod
+    def validate_note_date(cls, v):
+        if v in (None, ""):
+            return date.today()
+        return v
 
     @field_validator("color")
     @classmethod
@@ -79,6 +86,11 @@ class NoteCreate(NoteBase):
     pass
 
 
+class BulkNotesCreate(BaseModel):
+    csv: str
+    with_header: bool = True
+
+
 class NoteUpdate(BaseModel):
     title: Optional[str] = None
     meaning: Optional[str] = None
@@ -90,6 +102,13 @@ class NoteUpdate(BaseModel):
     category_id: Optional[int] = None
     sub_category_id: Optional[int] = None
     note_date: Optional[date] = None
+
+    @field_validator("note_date", mode="before")
+    @classmethod
+    def validate_note_date(cls, v):
+        if v in (None, ""):
+            return date.today()
+        return v
 
     @field_validator("color")
     @classmethod
