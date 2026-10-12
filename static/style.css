@@ -755,7 +755,7 @@ body {
   background: #1e3a5f;
 }
 
-.note-card .card-title {
+.note-card .card-word {
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -890,8 +890,8 @@ body {
   position: relative;
 }
 
-.notes-table tbody tr[data-title]:hover::after {
-  content: "Title: " attr(data-title);
+.notes-table tbody tr[data-word]:hover::after {
+  content: "Word: " attr(data-word);
   position: absolute;
   bottom: calc(100% + 4px);
   left: 0;
@@ -923,7 +923,7 @@ body {
   border-bottom: none;
 }
 
-.notes-table .td-title {
+.notes-table .td-word {
   font-weight: 500;
   white-space: nowrap;
   max-width: 200px;

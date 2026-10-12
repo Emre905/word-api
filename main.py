@@ -175,9 +175,9 @@ def list_notes(
     if search:
         pattern = f"%{search}%"
         q = q.filter(
-            Note.title.ilike(pattern)
+            Note.word.ilike(pattern)
             | Note.meaning.ilike(pattern)
-            | Note.note_text.ilike(pattern)
+            | Note.context.ilike(pattern)
             | Note.tags.ilike(pattern)
         )
     return q.order_by(Note.created_at.desc()).all()
@@ -226,17 +226,15 @@ def _normalize_bulk_row(row: dict) -> dict:
             continue
         normalized[key.strip().lstrip("\ufeff").lower()] = (value or "").strip()
 
-    title = (
+    word = (
         normalized.get("word")
-        or normalized.get("title")
         or normalized.get("word ")
         or ""
     )
     meaning = normalized.get("meaning") or normalized.get("translation") or ""
-    note_text = (
+    context = (
         normalized.get("context")
-        or normalized.get("note")
-        or normalized.get("note_text")
+        or normalized.get("example")
         or ""
     )
     tags = normalized.get("category") or normalized.get("tags") or ""
@@ -248,9 +246,9 @@ def _normalize_bulk_row(row: dict) -> dict:
     )
 
     return {
-        "title": title,
+        "word": word,
         "meaning": meaning,
-        "note_text": note_text,
+        "context": context,
         "tags": tags,
         "note_date": _parse_csv_note_date(created_time),
     }
@@ -307,20 +305,20 @@ def create_notes_bulk(payload: BulkNotesCreate, db: Session = Depends(get_db)):
 
     created_notes = []
     for row_number, parsed in enumerate(parsed_rows, start=1):
-        title = (parsed.get("title") or "").strip()
+        word = (parsed.get("word") or "").strip()
         meaning = (parsed.get("meaning") or "").strip()
-        note_text = (parsed.get("note_text") or "").strip()
+        context = (parsed.get("context") or "").strip()
 
-        if not title or not meaning:
+        if not word or not meaning:
             raise HTTPException(
                 400,
-                f"Row {row_number} is missing a required value for title or meaning.",
+                f"Row {row_number} is missing a required value for word or meaning.",
             )
 
         note = Note(
-            title=title,
+            word=word,
             meaning=meaning,
-            note_text=note_text,
+            context=context,
             tags=(parsed.get("tags") or "").strip() or None,
             note_date=parsed.get("note_date") or date.today(),
             priority="medium",

@@ -30,15 +30,16 @@ const viewBtns = $$(".view-btn");
 const newNoteBtn = $("#newNoteBtn");
 const noteModal = $("#noteModal");
 const noteForm = $("#noteForm");
-const modalTitle = $("#modalTitle");
+const modalWord = $("#modalWord");
 const noteId = $("#noteId");
 const singleNoteFields = $("#singleNoteFields");
 const bulkNoteFields = $("#bulkNoteFields");
 const bulkCsvInput = $("#bulkCsvInput");
 const bulkWithHeader = $("#bulkWithHeader");
 const bulkPreview = $("#bulkPreview");
+const bulkPreviewSummary = $("#bulkPreviewSummary");
 const bulkPreviewRows = $("#bulkPreviewRows");
-const noteTitle = $("#noteTitle");
+const noteWord = $("#noteWord");
 const noteMeaning = $("#noteMeaning");
 const noteCategory = $("#noteCategory");
 const noteSubCategory = $("#noteSubCategory");
@@ -296,9 +297,9 @@ function renderNotesTable() {
     const cat = state.categories.find((c) => c.id === n.category_id);
     const sub = state.subCategories.find((s) => s.id === n.sub_category_id);
     const catSub = [cat?.name, sub?.name].filter(Boolean).join(" / ") || "—";
-    const preview = n.note_text.replace(/<[^>]*>/g, "").substring(0, 120);
+    const preview = n.context.replace(/<[^>]*>/g, "").substring(0, 120);
     const tags = (n.tags || "").split(",").filter(Boolean).map((t) => `<span class="tag">${esc(t.trim())}</span>`).join("");
-    return `<tr class="priority-${n.priority}${n.is_archived ? ' archived' : ''}" data-id="${n.id}" data-title="${esc(n.title)}">
+    return `<tr class="priority-${n.priority}${n.is_archived ? ' archived' : ''}" data-id="${n.id}" data-title="${esc(n.word)}">
       <td class="td-actions">
         <button class="archive-note" title="${n.is_archived ? 'Restore' : 'Archive'}">${n.is_archived ? '&#x21B6;' : '&#x1F4E5;'}</button>
         <button class="edit-note" title="Edit">
@@ -309,9 +310,9 @@ function renderNotesTable() {
         </button>
         <button class="delete-note" title="Delete">&times;</button>
       </td>
-      <td class="td-title">${esc(n.title)}${n.is_archived ? ' <span class="archived-badge">archived</span>' : ''}</td>
+      <td class="td-word">${esc(n.word)}${n.is_archived ? ' <span class="archived-badge">archived</span>' : ''}</td>
       <td class="td-meaning">${esc(n.meaning)}</td>
-      <td class="td-note">${esc(preview)}${n.note_text.length > 120 ? "…" : ""}</td>
+      <td class="td-context">${esc(preview)}${n.context.length > 120 ? "…" : ""}</td>
       <td class="td-cat">${esc(catSub)}</td>
       <td class="td-priority"><span class="priority-badge">${n.priority}</span></td>
       <td class="td-date">${formatDisplayDate(n.note_date)}</td>
@@ -348,10 +349,10 @@ function renderNotesCards() {
 
   notesGrid.innerHTML = state.notes.map((n) => {
     const pClass = `priority-${n.priority}`;
-    const preview = n.note_text.replace(/<[^>]*>/g, "").substring(0, 150);
+    const preview = n.context.replace(/<[^>]*>/g, "").substring(0, 150);
     const tags = (n.tags || "").split(",").filter(Boolean).map((t) => `<span class="tag">${esc(t.trim())}</span>`).join("");
     return `<div class="note-card ${pClass}${n.is_archived ? ' archived' : ''}" data-id="${n.id}" style="border-left:3px solid ${n.color || 'transparent'}">
-      <div class="card-title">${esc(n.title)}${n.is_archived ? ' <span class="archived-badge">archived</span>' : ''}</div>
+      <div class="card-word">${esc(n.word)}${n.is_archived ? ' <span class="archived-badge">archived</span>' : ''}</div>
       <div class="card-meaning">${esc(n.meaning)}</div>
       <div class="card-preview">${esc(preview)}</div>
       <div class="card-meta">
@@ -401,7 +402,6 @@ function parseBulkCsvPreview(rawText, withHeader) {
   const rows = rawText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   if (!rows.length) return [];
 
-  const parsed = [];
   const csvLines = rows.map((line) => {
     const out = [];
     let current = "";
@@ -435,9 +435,20 @@ function parseBulkCsvPreview(rawText, withHeader) {
       meaning: padded[1] || "—",
       context: padded[2] || "—",
       category: padded[3] || "—",
-      createdTime: padded[4] || "—",
     };
   });
+}
+
+function countBulkCsvRows(csvText, withHeader) {
+  const lines = csvText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (!lines.length) return 0;
+
+  const dataRows = withHeader ? lines.slice(1) : lines;
+  return dataRows.length;
 }
 
 function renderBulkCsvPreview() {
@@ -445,16 +456,25 @@ function renderBulkCsvPreview() {
   if (!value) {
     bulkPreview.style.display = "none";
     bulkPreviewRows.innerHTML = "";
+    bulkPreviewSummary.textContent = "Previewing rows";
     return;
   }
 
   const previewRows = parseBulkCsvPreview(value, bulkWithHeader.checked);
+  const totalRows = countBulkCsvRows(value, bulkWithHeader.checked);
   if (!previewRows.length) {
     bulkPreview.style.display = "none";
     bulkPreviewRows.innerHTML = "";
+    bulkPreviewSummary.textContent = "Previewing rows";
     return;
   }
 
+  const previewLabel =
+    totalRows <= 3
+      ? `Previewing ${totalRows} row${totalRows === 1 ? "" : "s"}`
+      : `Previewing first 3 of ${totalRows} rows`;
+
+  bulkPreviewSummary.textContent = previewLabel;
   bulkPreviewRows.innerHTML = previewRows.map((row) => `
     <tr>
       <td style="padding:.75rem .8rem; border-bottom:1px solid var(--border);">${esc(row.word)}</td>
@@ -470,7 +490,7 @@ function setNoteEntryMode(mode) {
   const isBulk = mode === "bulk";
   singleNoteFields.style.display = isBulk ? "none" : "block";
   bulkNoteFields.style.display = isBulk ? "block" : "none";
-  noteTitle.required = !isBulk;
+  noteWord.required = !isBulk;
   noteMeaning.required = !isBulk;
   noteText.required = false;
   bulkCsvInput.required = isBulk;
@@ -489,7 +509,7 @@ async function openNoteModal(id = null) {
   noteForm.reset();
   noteId.value = "";
   bulkCsvInput.value = "";
-  modalTitle.textContent = "New Note";
+  modalWord.textContent = "New Note";
   noteDate.value = new Date().toISOString().split("T")[0];
   noteColor.value = "#4f46e5";
   notePriority.value = "medium";
@@ -498,8 +518,8 @@ async function openNoteModal(id = null) {
   if (id) {
     const note = await api.get(`/api/notes/${id}`);
     noteId.value = note.id;
-    modalTitle.textContent = "Edit Note — " + note.title;
-    noteTitle.value = note.title;
+    modalWord.textContent = "Edit Note — " + note.word;
+    noteWord.value = note.word;
     noteMeaning.value = note.meaning;
     noteCategory.value = note.category_id || "";
     await populateSubCategoryDropdown(note.category_id);
@@ -508,7 +528,7 @@ async function openNoteModal(id = null) {
     noteDate.value = note.note_date;
     noteColor.value = note.color || "#4f46e5";
     noteTags.value = note.tags || "";
-    noteText.value = note.note_text;
+    noteText.value = note.context;
     setNoteEntryMode("single");
 
     currentNoteIndex = state.notes.findIndex((n) => n.id === id);
@@ -640,9 +660,9 @@ noteForm.addEventListener("submit", async (e) => {
   }
 
   const payload = {
-    title: noteTitle.value.trim(),
+    word: noteWord.value.trim(),
     meaning: meaningValue,
-    note_text: noteText.value.trim(),
+    context: noteText.value.trim(),
     note_date: noteDate.value,
     priority: notePriority.value,
     color: noteColor.value,

@@ -5,10 +5,10 @@ A sleek, modern notes-taking application built with **FastAPI** (backend) and va
 ## Features
 
 - **Categories & Sub-Categories** — Organize notes hierarchically
-- **Rich Note Fields** — Title, text, priority (Low/Medium/High), tags, color labels, archived flag
+- **Rich Note Fields** — Word, text, priority (Low/Medium/High), tags, color labels, archived flag
 - **Auto Date** — Current date is pre-filled when creating a note
 - **Full CRUD** — Create, read, update, and archive/delete notes
-- **Search & Filter** — Filter by category, sub-category, priority, archived status, or full-text search on title + body + tags
+- **Search & Filter** — Filter by category, sub-category, priority, archived status, or full-text search on word + body + tags
 - **Dark / Light Theme** — Toggle with Sun/Moon icon, persisted in localStorage
 - **Database Backup** — Download the SQLite database file from the sidebar
 - **Database Restore** — Upload a previous `.db` backup file to restore data
@@ -27,7 +27,7 @@ A sleek, modern notes-taking application built with **FastAPI** (backend) and va
 
 | Field         | Type    | Description                                |
 | ------------- | ------- | ------------------------------------------ |
-| `title`       | string  | Descriptive title for quick identification |
+| `word`       | string  | Descriptive word for quick identification |
 | `meaning`     | string  | Meaning of word                            |
 | `priority`    | enum    | `low`, `medium`, `high`                    |
 | `is_archived` | boolean | Archive instead of delete                  |
@@ -122,8 +122,8 @@ notes_app/
 | Column          | Type                |
 | --------------- | ------------------- |
 | id              | PK                  |
-| title           | varchar(200)        |
-| note_text       | text                |
+| word           | varchar(200)        |
+| context       | text                |
 | priority        | enum                |
 | is_archived     | boolean             |
 | tags            | varchar(500)        |

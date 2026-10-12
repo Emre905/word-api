@@ -25,15 +25,15 @@ demesio,attention,praušau demesio,"essential, noun","May 22, 2024 7:30 PM"
     assert response.status_code == 201, response.text
     payload = response.json()
     assert len(payload) == 2
-    assert payload[0]["title"] == "pakartoti"
+    assert payload[0]["word"] == "pakartoti"
     assert payload[0]["meaning"] == "repeat"
-    assert payload[0]["note_text"] == "prašau pakartoti"
+    assert payload[0]["context"] == "prašau pakartoti"
     assert payload[0]["tags"] == "essential, noun"
     assert payload[0]["note_date"] == "2024-05-22"
 
-    assert payload[1]["title"] == "demesio"
+    assert payload[1]["word"] == "demesio"
     assert payload[1]["meaning"] == "attention"
-    assert payload[1]["note_text"] == "praušau demesio"
+    assert payload[1]["context"] == "praušau demesio"
 
     note_count = client.get("/api/notes").json()
     assert len(note_count) == 2
@@ -52,9 +52,9 @@ demesio,attention,praušau demesio,"essential, noun","May 22, 2024 7:30 PM"
     assert response.status_code == 201, response.text
     payload = response.json()
     assert len(payload) == 2
-    assert payload[0]["title"] == "pakartoti"
+    assert payload[0]["word"] == "pakartoti"
     assert payload[0]["meaning"] == "repeat"
-    assert payload[0]["note_text"] == "prašau pakartoti"
+    assert payload[0]["context"] == "prašau pakartoti"
     assert payload[0]["tags"] == "essential, noun"
     assert payload[0]["note_date"] == "2024-05-22"
 
@@ -72,24 +72,24 @@ stumti/stumia/stūmė,to push,,"ia/ė, ką, verb","May 30, 2024 9:53 PM"
     assert response.status_code == 201, response.text
     payload = response.json()
     assert len(payload) == 2
-    assert payload[0]["title"] == "traukti/traukia/traukė"
-    assert payload[0]["note_text"] == "traukiu draugo automobilį"
-    assert payload[1]["title"] == "stumti/stumia/stūmė"
-    assert payload[1]["note_text"] == ""
+    assert payload[0]["word"] == "traukti/traukia/traukė"
+    assert payload[0]["context"] == "traukiu draugo automobilį"
+    assert payload[1]["word"] == "stumti/stumia/stūmė"
+    assert payload[1]["context"] == ""
     assert payload[1]["tags"] == "ia/ė, ką, verb"
 
 
-def test_note_creation_allows_blank_note_text_when_title_and_meaning_are_present():
+def test_note_creation_allows_blank_note_text_when_word_and_meaning_are_present():
     main.Base.metadata.drop_all(bind=main.engine)
     main.Base.metadata.create_all(bind=main.engine)
 
-    response = client.post("/api/notes", json={"title": "Synonym", "meaning": "example"})
+    response = client.post("/api/notes", json={"word": "Synonym", "meaning": "example"})
 
     assert response.status_code == 201, response.text
     payload = response.json()
-    assert payload["title"] == "Synonym"
+    assert payload["word"] == "Synonym"
     assert payload["meaning"] == "example"
-    assert payload["note_text"] == ""
+    assert payload["context"] == ""
     assert payload["note_date"] == date.today().isoformat()
 
 
@@ -97,7 +97,7 @@ def test_note_creation_uses_today_when_note_date_is_missing_or_blank():
     main.Base.metadata.drop_all(bind=main.engine)
     main.Base.metadata.create_all(bind=main.engine)
 
-    response = client.post("/api/notes", json={"title": "Today", "meaning": "now", "note_date": ""})
+    response = client.post("/api/notes", json={"word": "Today", "meaning": "now", "note_date": ""})
 
     assert response.status_code == 201, response.text
     assert response.json()["note_date"] == date.today().isoformat()

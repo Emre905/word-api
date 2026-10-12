@@ -13,3 +13,4 @@ uv.lock
 
 # Database
 data/notes_app.db
+data/test_notes_app.db

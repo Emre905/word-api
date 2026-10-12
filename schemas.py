@@ -56,9 +56,9 @@ class SubCategoryResponse(SubCategoryBase):
 
 
 class NoteBase(BaseModel):
-    title: str
+    word: str
     meaning: str
-    note_text: Optional[str] = ""
+    context: Optional[str] = ""
     priority: PriorityEnum = PriorityEnum.MEDIUM
     is_archived: bool = False
     tags: Optional[str] = None
@@ -92,9 +92,9 @@ class BulkNotesCreate(BaseModel):
 
 
 class NoteUpdate(BaseModel):
-    title: Optional[str] = None
+    word: Optional[str] = None
     meaning: Optional[str] = None
-    note_text: Optional[str] = None
+    context: Optional[str] = None
     priority: Optional[PriorityEnum] = None
     is_archived: Optional[bool] = None
     tags: Optional[str] = None

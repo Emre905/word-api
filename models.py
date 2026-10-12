@@ -42,9 +42,9 @@ class Note(Base):
     __tablename__ = "notes"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(200), nullable=False)
+    word = Column(String(200), nullable=False)
     meaning = Column(String(200), nullable=False)
-    note_text = Column(Text, nullable=False)
+    context = Column(Text, nullable=False)
     priority = Column(
         SQLEnum("low", "medium", "high", name="priorityenum", create_type=False),
         default="medium",

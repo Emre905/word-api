@@ -37,9 +37,9 @@ CREATE TABLE IF NOT EXISTS sub_categories (
 -- Notes
 CREATE TABLE IF NOT EXISTS notes (
     id SERIAL PRIMARY KEY,
-    title VARCHAR(200) NOT NULL,
+    word VARCHAR(200) NOT NULL,
     meaning VARCHAR(200) NOT NULL,
-    note_text TEXT NOT NULL,
+    context TEXT NOT NULL,
     priority priorityenum DEFAULT 'medium',
     is_archived BOOLEAN DEFAULT FALSE,
     tags VARCHAR(500),
@@ -52,8 +52,8 @@ CREATE TABLE IF NOT EXISTS notes (
 );
 
 -- Indexes for search performance
-CREATE INDEX IF NOT EXISTS idx_notes_title ON notes USING gin (to_tsvector('english', title));
-CREATE INDEX IF NOT EXISTS idx_notes_text ON notes USING gin (to_tsvector('english', note_text));
+CREATE INDEX IF NOT EXISTS idx_notes_word ON notes USING gin (to_tsvector('english', word));
+CREATE INDEX IF NOT EXISTS idx_notes_text ON notes USING gin (to_tsvector('english', context));
 CREATE INDEX IF NOT EXISTS idx_notes_category ON notes(category_id);
 CREATE INDEX IF NOT EXISTS idx_notes_sub_category ON notes(sub_category_id);
 CREATE INDEX IF NOT EXISTS idx_notes_priority ON notes(priority);
