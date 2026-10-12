@@ -5,10 +5,10 @@ A sleek, modern notes-taking application built with **FastAPI** (backend) and va
 ## Features
 
 - **Categories & Sub-Categories** — Organize notes hierarchically
-- **Rich Note Fields** — Word, text, priority (Low/Medium/High), tags, color labels, archived flag
+- **Rich Note Fields** — Word, text, priority (Low/Medium/High), tags, and color labels
 - **Auto Date** — Current date is pre-filled when creating a note
-- **Full CRUD** — Create, read, update, and archive/delete notes
-- **Search & Filter** — Filter by category, sub-category, priority, archived status, or full-text search on word + body + tags
+- **Full CRUD** — Create, read, update, and delete notes
+- **Search & Filter** — Filter by category, sub-category, priority, or full-text search on word + body + tags
 - **Dark / Light Theme** — Toggle with Sun/Moon icon, persisted in localStorage
 - **Database Backup** — Download the SQLite database file from the sidebar
 - **Database Restore** — Upload a previous `.db` backup file to restore data
@@ -30,7 +30,6 @@ A sleek, modern notes-taking application built with **FastAPI** (backend) and va
 | `word`       | string  | Descriptive word for quick identification |
 | `meaning`     | string  | Meaning of word                            |
 | `priority`    | enum    | `low`, `medium`, `high`                    |
-| `is_archived` | boolean | Archive instead of delete                  |
 | `tags`        | string  | Comma-separated tags for organization      |
 | `color`       | string  | Hex color for visual categorization        |
 
@@ -122,10 +121,9 @@ notes_app/
 | Column          | Type                |
 | --------------- | ------------------- |
 | id              | PK                  |
-| word           | varchar(200)        |
-| context       | text                |
+| word            | varchar(200)        |
+| context         | text                |
 | priority        | enum                |
-| is_archived     | boolean             |
 | tags            | varchar(500)        |
 | color           | varchar(7)          |
 | category_id     | FK → categories     |

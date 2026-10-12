@@ -156,7 +156,6 @@ def delete_sub_category(sub_category_id: int, db: Session = Depends(get_db)):
 
 @app.get("/api/notes", response_model=List[NoteResponse])
 def list_notes(
-    archived: Optional[bool] = Query(False),
     category_id: Optional[int] = Query(None),
     sub_category_id: Optional[int] = Query(None),
     priority: Optional[str] = Query(None),
@@ -164,8 +163,6 @@ def list_notes(
     db: Session = Depends(get_db),
 ):
     q = db.query(Note)
-    if not archived:
-        q = q.filter(Note.is_archived == False)
     if category_id is not None:
         q = q.filter(Note.category_id == category_id)
     if sub_category_id is not None:

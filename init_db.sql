@@ -41,7 +41,6 @@ CREATE TABLE IF NOT EXISTS notes (
     meaning VARCHAR(200) NOT NULL,
     context TEXT NOT NULL,
     priority priorityenum DEFAULT 'medium',
-    is_archived BOOLEAN DEFAULT FALSE,
     tags VARCHAR(500),
     color VARCHAR(7),
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
@@ -57,7 +56,6 @@ CREATE INDEX IF NOT EXISTS idx_notes_text ON notes USING gin (to_tsvector('engli
 CREATE INDEX IF NOT EXISTS idx_notes_category ON notes(category_id);
 CREATE INDEX IF NOT EXISTS idx_notes_sub_category ON notes(sub_category_id);
 CREATE INDEX IF NOT EXISTS idx_notes_priority ON notes(priority);
-CREATE INDEX IF NOT EXISTS idx_notes_archived ON notes(is_archived);
 CREATE INDEX IF NOT EXISTS idx_sub_categories_category ON sub_categories(category_id);
 
 -- Trigger to auto-update updated_at

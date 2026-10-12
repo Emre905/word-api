@@ -644,18 +644,6 @@ body {
   border-color: var(--accent);
 }
 
-.archive-toggle {
-  display: flex;
-  align-items: center;
-  gap: .35rem;
-  font-size: .8rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-  user-select: none;
-}
-
-.archive-toggle input { accent-color: var(--accent); }
-
 /* ── Buttons ───────────────────────────────────────────────────────────────── */
 .btn-primary {
   background: var(--accent);
@@ -827,26 +815,8 @@ body {
 }
 
 .note-card .card-actions button:hover { background: var(--surface-hover); color: var(--text-primary); }
-.note-card .card-actions .archive-card:hover { color: var(--accent); }
 .note-card .card-actions .edit-card:hover { color: #0891b2; }
 .note-card .card-actions .delete-card:hover { color: var(--danger); }
-
-.note-card.archived {
-  opacity: .55;
-}
-
-.note-card .archived-badge {
-  font-size: .6rem;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  font-weight: 600;
-  padding: .1rem .35rem;
-  border-radius: 20px;
-  background: var(--border);
-  color: var(--text-muted);
-  margin-left: .4rem;
-  vertical-align: middle;
-}
 .table-wrap {
   overflow-x: auto;
 }
@@ -1008,26 +978,8 @@ body {
 }
 
 .td-actions button:hover { background: var(--surface-hover); color: var(--text-primary); }
-.td-actions .archive-note:hover { color: var(--accent); }
 .td-actions .edit-note:hover { color: #0891b2; }
 .td-actions .delete-note:hover { color: var(--danger); }
-
-.notes-table tbody tr.archived {
-  opacity: .55;
-}
-
-.notes-table .archived-badge {
-  font-size: .6rem;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  font-weight: 600;
-  padding: .1rem .35rem;
-  border-radius: 20px;
-  background: var(--border);
-  color: var(--text-muted);
-  margin-left: .4rem;
-  vertical-align: middle;
-}
 
 .empty-state {
   grid-column: 1 / -1;

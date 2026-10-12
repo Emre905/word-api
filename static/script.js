@@ -24,7 +24,6 @@ const tableView = $("#tableView");
 const cardsView = $("#cardsView");
 const searchInput = $("#searchInput");
 const priorityFilter = $("#priorityFilter");
-const showArchived = $("#showArchived");
 const themeToggle = $("#themeToggle");
 const viewBtns = $$(".view-btn");
 const newNoteBtn = $("#newNoteBtn");
@@ -151,7 +150,6 @@ allNotesSection.addEventListener("click", () => {
   state.selectedSubCategoryId = null;
   searchInput.value = "";
   priorityFilter.value = "";
-  showArchived.checked = false;
   renderCategories();
   loadSubCategories();
   loadNotes();
@@ -265,7 +263,6 @@ function renderSubCategories() {
 /* ── Notes ──────────────────────────────────────────────────────────────────── */
 async function loadNotes() {
   const params = new URLSearchParams();
-  if (showArchived.checked) params.set("archived", "true");
   if (state.selectedCategoryId) params.set("category_id", state.selectedCategoryId);
   if (state.selectedSubCategoryId) params.set("sub_category_id", state.selectedSubCategoryId);
   if (priorityFilter.value) params.set("priority", priorityFilter.value);
@@ -299,9 +296,8 @@ function renderNotesTable() {
     const catSub = [cat?.name, sub?.name].filter(Boolean).join(" / ") || "—";
     const preview = n.context.replace(/<[^>]*>/g, "").substring(0, 120);
     const tags = (n.tags || "").split(",").filter(Boolean).map((t) => `<span class="tag">${esc(t.trim())}</span>`).join("");
-    return `<tr class="priority-${n.priority}${n.is_archived ? ' archived' : ''}" data-id="${n.id}" data-title="${esc(n.word)}">
+    return `<tr class="priority-${n.priority}" data-id="${n.id}" data-title="${esc(n.word)}">
       <td class="td-actions">
-        <button class="archive-note" title="${n.is_archived ? 'Restore' : 'Archive'}">${n.is_archived ? '&#x21B6;' : '&#x1F4E5;'}</button>
         <button class="edit-note" title="Edit">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
@@ -310,7 +306,7 @@ function renderNotesTable() {
         </button>
         <button class="delete-note" title="Delete">&times;</button>
       </td>
-      <td class="td-word">${esc(n.word)}${n.is_archived ? ' <span class="archived-badge">archived</span>' : ''}</td>
+      <td class="td-word">${esc(n.word)}</td>
       <td class="td-meaning">${esc(n.meaning)}</td>
       <td class="td-context">${esc(preview)}${n.context.length > 120 ? "…" : ""}</td>
       <td class="td-cat">${esc(catSub)}</td>
@@ -325,12 +321,6 @@ function renderNotesTable() {
     row.querySelector(".edit-note").addEventListener("click", (e) => {
       e.stopPropagation();
       openNoteModal(id);
-    });
-    row.querySelector(".archive-note").addEventListener("click", async (e) => {
-      e.stopPropagation();
-      const note = state.notes.find((n) => n.id === id);
-      await api.put(`/api/notes/${id}`, { is_archived: !note.is_archived });
-      loadNotes();
     });
     row.querySelector(".delete-note").addEventListener("click", async (e) => {
       e.stopPropagation();
@@ -351,8 +341,8 @@ function renderNotesCards() {
     const pClass = `priority-${n.priority}`;
     const preview = n.context.replace(/<[^>]*>/g, "").substring(0, 150);
     const tags = (n.tags || "").split(",").filter(Boolean).map((t) => `<span class="tag">${esc(t.trim())}</span>`).join("");
-    return `<div class="note-card ${pClass}${n.is_archived ? ' archived' : ''}" data-id="${n.id}" style="border-left:3px solid ${n.color || 'transparent'}">
-      <div class="card-word">${esc(n.word)}${n.is_archived ? ' <span class="archived-badge">archived</span>' : ''}</div>
+    return `<div class="note-card ${pClass}" data-id="${n.id}" style="border-left:3px solid ${n.color || 'transparent'}">
+      <div class="card-word">${esc(n.word)}</div>
       <div class="card-meaning">${esc(n.meaning)}</div>
       <div class="card-preview">${esc(preview)}</div>
       <div class="card-meta">
@@ -360,7 +350,6 @@ function renderNotesCards() {
         <span class="date">${formatDisplayDate(n.note_date)}</span>
         ${tags}
         <div class="card-actions">
-          <button class="archive-card" title="${n.is_archived ? 'Restore' : 'Archive'}">${n.is_archived ? '&#x21B6;' : '&#x1F4E5;'}</button>
           <button class="edit-card" title="Edit">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
@@ -378,12 +367,6 @@ function renderNotesCards() {
     card.querySelector(".edit-card").addEventListener("click", (e) => {
       e.stopPropagation();
       openNoteModal(id);
-    });
-    card.querySelector(".archive-card").addEventListener("click", async (e) => {
-      e.stopPropagation();
-      const note = state.notes.find((n) => n.id === id);
-      await api.put(`/api/notes/${id}`, { is_archived: !note.is_archived });
-      loadNotes();
     });
     card.querySelector(".delete-card").addEventListener("click", async (e) => {
       e.stopPropagation();
@@ -790,7 +773,6 @@ async function populateSubCategoryDropdown(categoryId) {
 /* ── Filters ───────────────────────────────────────────────────────────────── */
 searchInput.addEventListener("input", debounce(loadNotes, 300));
 priorityFilter.addEventListener("change", loadNotes);
-showArchived.addEventListener("change", loadNotes);
 
 newNoteBtn.addEventListener("click", () => openNoteModal());
 

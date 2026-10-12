@@ -60,7 +60,6 @@ class NoteBase(BaseModel):
     meaning: str
     context: Optional[str] = ""
     priority: PriorityEnum = PriorityEnum.MEDIUM
-    is_archived: bool = False
     tags: Optional[str] = None
     color: Optional[str] = None
     category_id: Optional[int] = None
@@ -96,7 +95,6 @@ class NoteUpdate(BaseModel):
     meaning: Optional[str] = None
     context: Optional[str] = None
     priority: Optional[PriorityEnum] = None
-    is_archived: Optional[bool] = None
     tags: Optional[str] = None
     color: Optional[str] = None
     category_id: Optional[int] = None

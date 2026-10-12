@@ -1,7 +1,7 @@
 import os
 
 from sqlalchemy import (
-    Column, Integer, String, Text, Boolean, Date, DateTime,
+    Column, Integer, String, Text, Date, DateTime,
     ForeignKey, Enum as SQLEnum,
 )
 from sqlalchemy.orm import relationship
@@ -49,7 +49,6 @@ class Note(Base):
         SQLEnum("low", "medium", "high", name="priorityenum", create_type=False),
         default="medium",
     )
-    is_archived = Column(Boolean, default=False)
     tags = Column(String(500), nullable=True)
     color = Column(String(7), nullable=True)
     category_id = Column(
