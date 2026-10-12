@@ -101,3 +101,19 @@ def test_note_creation_uses_today_when_note_date_is_missing_or_blank():
 
     assert response.status_code == 201, response.text
     assert response.json()["note_date"] == date.today().isoformat()
+
+
+def test_duplicate_word_or_meaning_is_rejected_case_insensitively():
+    main.Base.metadata.drop_all(bind=main.engine)
+    main.Base.metadata.create_all(bind=main.engine)
+
+    first = client.post("/api/notes", json={"word": "Hello", "meaning": "bonjour"})
+    assert first.status_code == 201, first.text
+
+    duplicate_word = client.post("/api/notes", json={"word": " hello ", "meaning": "another"})
+    assert duplicate_word.status_code == 409, duplicate_word.text
+    assert "word" in duplicate_word.json()["detail"].lower()
+
+    duplicate_meaning = client.post("/api/notes", json={"word": "Salut", "meaning": " bonjour "})
+    assert duplicate_meaning.status_code == 409, duplicate_meaning.text
+    assert "meaning" in duplicate_meaning.json()["detail"].lower()

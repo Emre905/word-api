@@ -1116,6 +1116,19 @@ body {
   cursor: pointer;
 }
 
+.form-group input.field-error,
+.form-group select.field-error,
+.form-group textarea.field-error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.form-message {
+  margin-top: .35rem;
+  font-size: .78rem;
+  color: #dc2626;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

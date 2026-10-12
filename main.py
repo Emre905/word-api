@@ -11,6 +11,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request,
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import DATA_DIR, DATABASE_URL, Base, engine, get_db
@@ -180,10 +181,49 @@ def list_notes(
     return q.order_by(Note.created_at.desc()).all()
 
 
+def _normalize_duplicate_value(value: Optional[str]) -> str:
+    return (value or "").strip().casefold()
+
+
+def _ensure_unique_note_values(
+    db: Session,
+    *,
+    word: Optional[str] = None,
+    meaning: Optional[str] = None,
+    note_id: Optional[int] = None,
+):
+    word_key = _normalize_duplicate_value(word)
+    meaning_key = _normalize_duplicate_value(meaning)
+
+    if word_key:
+        duplicate = (
+            db.query(Note)
+            .filter(Note.id != note_id, func.lower(Note.word) == word_key)
+            .first()
+        )
+        if duplicate:
+            raise HTTPException(409, f"Duplicate word: '{duplicate.word}' already exists.")
+
+    if meaning_key:
+        duplicate = (
+            db.query(Note)
+            .filter(Note.id != note_id, func.lower(Note.meaning) == meaning_key)
+            .first()
+        )
+        if duplicate:
+            raise HTTPException(409, f"Duplicate meaning: '{duplicate.meaning}' already exists.")
+
+
 @app.post("/api/notes", response_model=NoteResponse, status_code=201)
 def create_note(payload: NoteCreate, db: Session = Depends(get_db)):
     data = payload.model_dump()
+    data["word"] = (data.get("word") or "").strip()
+    data["meaning"] = (data.get("meaning") or "").strip()
+    data["context"] = (data.get("context") or "").strip()
     data["note_date"] = data.get("note_date") or date.today()
+
+    _ensure_unique_note_values(db, word=data["word"], meaning=data["meaning"])
+
     note = Note(**data)
     db.add(note)
     db.commit()
@@ -301,6 +341,9 @@ def create_notes_bulk(payload: BulkNotesCreate, db: Session = Depends(get_db)):
         raise HTTPException(400, "No valid notes were found in the CSV payload")
 
     created_notes = []
+    seen_words = set()
+    seen_meanings = set()
+
     for row_number, parsed in enumerate(parsed_rows, start=1):
         word = (parsed.get("word") or "").strip()
         meaning = (parsed.get("meaning") or "").strip()
@@ -311,6 +354,18 @@ def create_notes_bulk(payload: BulkNotesCreate, db: Session = Depends(get_db)):
                 400,
                 f"Row {row_number} is missing a required value for word or meaning.",
             )
+
+        word_key = _normalize_duplicate_value(word)
+        meaning_key = _normalize_duplicate_value(meaning)
+        if word_key in seen_words:
+            raise HTTPException(409, f"Row {row_number}: duplicate word '{word}' in the CSV upload.")
+        if meaning_key in seen_meanings:
+            raise HTTPException(409, f"Row {row_number}: duplicate meaning '{meaning}' in the CSV upload.")
+
+        _ensure_unique_note_values(db, word=word, meaning=meaning)
+
+        seen_words.add(word_key)
+        seen_meanings.add(meaning_key)
 
         note = Note(
             word=word,
@@ -343,7 +398,23 @@ def update_note(note_id: int, payload: NoteUpdate, db: Session = Depends(get_db)
     note = db.query(Note).filter(Note.id == note_id).first()
     if not note:
         raise HTTPException(404, "Note not found")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+
+    update_data = payload.model_dump(exclude_unset=True)
+    if "word" in update_data:
+        update_data["word"] = (update_data["word"] or "").strip()
+    if "meaning" in update_data:
+        update_data["meaning"] = (update_data["meaning"] or "").strip()
+    if "context" in update_data:
+        update_data["context"] = (update_data["context"] or "").strip()
+
+    _ensure_unique_note_values(
+        db,
+        word=update_data.get("word", note.word),
+        meaning=update_data.get("meaning", note.meaning),
+        note_id=note.id,
+    )
+
+    for field, value in update_data.items():
         setattr(note, field, value)
     db.commit()
     db.refresh(note)

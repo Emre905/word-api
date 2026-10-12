@@ -40,6 +40,8 @@ const bulkPreviewSummary = $("#bulkPreviewSummary");
 const bulkPreviewRows = $("#bulkPreviewRows");
 const noteWord = $("#noteWord");
 const noteMeaning = $("#noteMeaning");
+const noteWordDuplicateMessage = $("#noteWordDuplicateMessage");
+const noteMeaningDuplicateMessage = $("#noteMeaningDuplicateMessage");
 const noteCategory = $("#noteCategory");
 const noteSubCategory = $("#noteSubCategory");
 const notePriority = $("#notePriority");
@@ -66,8 +68,36 @@ const subCategoryDescription = $("#subCategoryDescription");
 /* ── API helpers ───────────────────────────────────────────────────────────── */
 const api = {
   async get(path) { const r = await fetch(path); if (!r.ok) throw Error(r.statusText); return r.status === 204 ? null : r.json(); },
-  async post(path, body) { const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); if (!r.ok) throw Error(await r.text()); return r.json(); },
-  async put(path, body) { const r = await fetch(path, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); if (!r.ok) throw Error(await r.text()); return r.json(); },
+  async post(path, body) {
+    const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) {
+      const text = await r.text();
+      let message = text;
+      try {
+        const parsed = JSON.parse(text);
+        message = parsed.detail || text;
+      } catch (error) {
+        // keep the raw text fallback
+      }
+      throw new Error(message);
+    }
+    return r.json();
+  },
+  async put(path, body) {
+    const r = await fetch(path, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) {
+      const text = await r.text();
+      let message = text;
+      try {
+        const parsed = JSON.parse(text);
+        message = parsed.detail || text;
+      } catch (error) {
+        // keep the raw text fallback
+      }
+      throw new Error(message);
+    }
+    return r.json();
+  },
   async del(path) { const r = await fetch(path, { method: "DELETE" }); if (!r.ok) throw Error(r.statusText); },
 };
 
@@ -588,7 +618,24 @@ async function ensureVerbCategory() {
   return ensureCategoryByName("verb");
 }
 
+function setDuplicateFieldState(field, messageEl, message) {
+  if (!field || !messageEl) return;
+  field.classList.toggle("field-error", Boolean(message));
+  messageEl.textContent = message || "";
+  messageEl.hidden = !message;
+}
+
+function clearDuplicateFieldStates() {
+  setDuplicateFieldState(noteWord, noteWordDuplicateMessage, "");
+  setDuplicateFieldState(noteMeaning, noteMeaningDuplicateMessage, "");
+}
+
+noteWord.addEventListener("input", () => {
+  setDuplicateFieldState(noteWord, noteWordDuplicateMessage, "");
+});
+
 noteMeaning.addEventListener("input", async () => {
+  setDuplicateFieldState(noteMeaning, noteMeaningDuplicateMessage, "");
   const meaningValue = noteMeaning.value.trim();
   if (!/^to\s+/i.test(meaningValue)) {
     if (!noteCategory.value || noteCategory.value === "") {
@@ -608,6 +655,7 @@ bulkCsvInput.addEventListener("input", renderBulkCsvPreview);
 
 noteForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+  clearDuplicateFieldStates();
 
   const selectedMode = document.querySelector('input[name="noteEntryMode"]:checked')?.value || "single";
 
@@ -624,7 +672,13 @@ noteForm.addEventListener("submit", async (e) => {
       return;
     }
 
-    await api.post("/api/notes/bulk", { csv: csvText, with_header: bulkWithHeader.checked });
+    try {
+      await api.post("/api/notes/bulk", { csv: csvText, with_header: bulkWithHeader.checked });
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
+
     state.selectedCategoryId = null;
     state.selectedSubCategoryId = null;
     closeNoteModal();
@@ -655,11 +709,27 @@ noteForm.addEventListener("submit", async (e) => {
   };
 
   const id = noteId.value;
-  if (id) {
-    await api.put(`/api/notes/${id}`, payload);
-  } else {
-    const created = await api.post("/api/notes", payload);
-    noteId.value = created.id;
+  try {
+    if (id) {
+      await api.put(`/api/notes/${id}`, payload);
+    } else {
+      const created = await api.post("/api/notes", payload);
+      noteId.value = created.id;
+    }
+  } catch (error) {
+    const message = error.message || "This note could not be saved.";
+    if (message.toLowerCase().includes("word")) {
+      setDuplicateFieldState(noteWord, noteWordDuplicateMessage, "This word already exists. Please choose a different one.");
+      noteWord.focus();
+      return;
+    }
+    if (message.toLowerCase().includes("meaning")) {
+      setDuplicateFieldState(noteMeaning, noteMeaningDuplicateMessage, "This meaning already exists. Please choose a different one.");
+      noteMeaning.focus();
+      return;
+    }
+    alert(message);
+    return;
   }
 
   state.selectedCategoryId = null;
