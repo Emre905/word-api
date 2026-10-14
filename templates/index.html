@@ -195,32 +195,45 @@
       </div>
       <form id="noteForm">
         <input type="hidden" id="noteId">
-        <div class="form-group">
-          <label>Entry mode</label>
-          <div class="mode-toggle" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
-            <label style="display:flex; align-items:center; gap:.5rem;">
-              <input type="radio" name="noteEntryMode" value="single" checked>
-              Single note
-            </label>
-            <label style="display:flex; align-items:center; gap:.5rem;">
+        <div class="mode-toggle" style="display:flex; align-items:center; gap:1rem; margin-bottom: 1rem; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:.5rem; font-size:.8rem;">
+            <input type="radio" name="noteEntryMode" value="single" checked>
+            Single note
+          </label>
+          <div id="bulkModeControls" style="display:flex; align-items:center; gap:.75rem; flex-wrap:wrap;">
+            <label style="display:flex; align-items:center; gap:.5rem; font-size:.8rem; margin:0;">
               <input type="radio" name="noteEntryMode" value="bulk">
               Bulk CSV
+            </label>
+            <label id="bulkWithHeaderWrap" style="display:none; align-items:center; gap:.5rem; font-size:.8rem; margin:0;">
+              <input type="checkbox" id="bulkWithHeader">
+              <span>With header</span>
             </label>
           </div>
         </div>
 
         <div id="singleNoteFields">
-          <div class="form-group">
-            <label for="noteWord">Word</label>
-            <input type="text" id="noteWord" required placeholder="Note word">
-            <div id="noteWordDuplicateMessage" class="form-message" hidden></div>
+          <div class="form-row compact-row">
+            <div class="form-group">
+              <label for="noteWord">Word</label>
+              <input type="text" id="noteWord" required placeholder="Note word">
+              <div id="noteWordDuplicateMessage" class="form-message" hidden></div>
+            </div>
+            <div class="form-group">
+              <label for="noteMeaning">Meaning</label>
+              <input type="text" id="noteMeaning" placeholder="Meaning">
+              <div id="noteMeaningDuplicateMessage" class="form-message" hidden></div>
+            </div>
           </div>
           <div class="form-group">
-            <label for="noteMeaning">Meaning (EN translation)</label>
-            <input type="text" id="noteMeaning" placeholder="Note meaning">
-            <div id="noteMeaningDuplicateMessage" class="form-message" hidden></div>
+            <label for="noteText">Context</label>
+            <textarea id="noteText" rows="6" placeholder="Write your example sentence/phrase here..."></textarea>
           </div>
-          <div class="form-row">
+          <div class="form-group">
+            <label for="noteTags">Tags (comma separated)</label>
+            <input type="text" id="noteTags" placeholder="e.g. work, personal, ideas">
+          </div>
+          <div class="form-row compact-row three-up">
             <div class="form-group">
               <label for="noteCategory">Category</label>
               <select id="noteCategory"></select>
@@ -229,8 +242,6 @@
               <label for="noteSubCategory">Sub-Category</label>
               <select id="noteSubCategory"></select>
             </div>
-          </div>
-          <div class="form-row">
             <div class="form-group">
               <label for="notePriority">Priority</label>
               <select id="notePriority">
@@ -239,32 +250,14 @@
                 <option value="high">High</option>
               </select>
             </div>
-            <div class="form-group">
-              <label for="noteDate">Date</label>
-              <input type="date" id="noteDate">
-            </div>
-            <div class="form-group">
-              <label for="noteColor">Color</label>
-              <input type="color" id="noteColor" value="#4f46e5">
-            </div>
           </div>
           <div class="form-group">
-            <label for="noteTags">Tags (comma separated)</label>
-            <input type="text" id="noteTags" placeholder="e.g. work, personal, ideas">
-          </div>
-          <div class="form-group">
-            <label for="noteText">Context</label>
-            <textarea id="noteText" rows="6" placeholder="Write your example sentence/phrase here..."></textarea>
+            <label for="noteColor">Color</label>
+            <input type="color" id="noteColor" value="#4f46e5">
           </div>
         </div>
 
         <div id="bulkNoteFields" style="display:none;">
-          <div class="form-group" style="margin-bottom: .75rem;">
-            <label style="display:flex; align-items:center; gap:.5rem;">
-              <input type="checkbox" id="bulkWithHeader" checked>
-              <span>With header</span>
-            </label>
-          </div>
           <div class="form-group">
             <label for="bulkCsvInput">CSV import</label>
             <textarea id="bulkCsvInput" rows="10" placeholder="Word,Meaning,Context,Category&#10;pakartoti,repeat,prašau pakartoti,&quot;essential, noun&quot;"></textarea>

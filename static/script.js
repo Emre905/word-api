@@ -33,6 +33,8 @@ const modalWord = $("#modalWord");
 const noteId = $("#noteId");
 const singleNoteFields = $("#singleNoteFields");
 const bulkNoteFields = $("#bulkNoteFields");
+const bulkModeControls = $("#bulkModeControls");
+const bulkWithHeaderWrap = $("#bulkWithHeaderWrap");
 const bulkCsvInput = $("#bulkCsvInput");
 const bulkWithHeader = $("#bulkWithHeader");
 const bulkPreview = $("#bulkPreview");
@@ -503,10 +505,15 @@ function setNoteEntryMode(mode) {
   const isBulk = mode === "bulk";
   singleNoteFields.style.display = isBulk ? "none" : "block";
   bulkNoteFields.style.display = isBulk ? "block" : "none";
+  bulkModeControls.style.display = "flex";
+  bulkWithHeaderWrap.style.display = isBulk ? "flex" : "none";
   noteWord.required = !isBulk;
   noteMeaning.required = !isBulk;
   noteText.required = false;
   bulkCsvInput.required = isBulk;
+  noteWord.disabled = isBulk;
+  noteMeaning.disabled = isBulk;
+  noteText.disabled = isBulk;
   if (isBulk) {
     renderBulkCsvPreview();
   } else {
@@ -523,7 +530,7 @@ async function openNoteModal(id = null) {
   noteId.value = "";
   bulkCsvInput.value = "";
   modalWord.textContent = "New Note";
-  noteDate.value = new Date().toISOString().split("T")[0];
+  if (noteDate) {noteDate.value = new Date().toISOString().split("T")[0];}
   noteColor.value = "#4f46e5";
   notePriority.value = "medium";
   setNoteEntryMode("single");
@@ -538,7 +545,7 @@ async function openNoteModal(id = null) {
     await populateSubCategoryDropdown(note.category_id);
     noteSubCategory.value = note.sub_category_id || "";
     notePriority.value = note.priority;
-    noteDate.value = note.note_date;
+    if (noteDate) {noteDate.value = note.note_date;}
     noteColor.value = note.color || "#4f46e5";
     noteTags.value = note.tags || "";
     noteText.value = note.context;
@@ -717,7 +724,7 @@ noteForm.addEventListener("submit", async (e) => {
     word: noteWord.value.trim(),
     meaning: meaningValue,
     context: noteText.value.trim(),
-    note_date: noteDate.value,
+    ...(noteDate ? { note_date: noteDate.value } : {}),
     priority: notePriority.value,
     color: noteColor.value,
     tags: noteTags.value.trim(),

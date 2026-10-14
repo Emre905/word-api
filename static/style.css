@@ -1135,6 +1135,14 @@ body {
   gap: .75rem;
 }
 
+.compact-row {
+  gap: .6rem;
+}
+
+.three-up {
+  grid-template-columns: 1.2fr 1.4fr .9fr;
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
