@@ -103,6 +103,25 @@ def test_note_creation_uses_today_when_note_date_is_missing_or_blank():
     assert response.json()["note_date"] == date.today().isoformat()
 
 
+def test_note_tags_are_normalized_when_split_by_space_or_comma():
+    main.Base.metadata.drop_all(bind=main.engine)
+    main.Base.metadata.create_all(bind=main.engine)
+
+    response = client.post(
+        "/api/notes",
+        json={"word": "Tags", "meaning": "sample", "tags": "work personal"},
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["tags"] == "work, personal"
+
+    second = client.post(
+        "/api/notes",
+        json={"word": "Tags 2", "meaning": "sample 2", "tags": "work,personal"},
+    )
+    assert second.status_code == 201, second.text
+    assert second.json()["tags"] == "work, personal"
+
+
 def test_duplicate_word_or_meaning_is_rejected_case_insensitively():
     main.Base.metadata.drop_all(bind=main.engine)
     main.Base.metadata.create_all(bind=main.engine)

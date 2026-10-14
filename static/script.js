@@ -51,6 +51,7 @@ const noteDate = $("#noteDate");
 const noteColor = $("#noteColor");
 const noteTags = $("#noteTags");
 const noteText = $("#noteText");
+const modalSubmit = $("#modalSubmit");
 const modalClose = $("#modalClose");
 const modalCancel = $("#modalCancel");
 const modalPrev = $("#modalPrev");
@@ -564,6 +565,12 @@ async function openNoteModal(id = null) {
 
   updateNavButtons();
   noteModal.classList.add("active");
+
+  // Focus the word input for new notes (or editing old notes)
+  requestAnimationFrame(() => {
+    noteWord.focus();
+    noteWord.select();
+  });
 }
 
 function updateNavButtons() {
@@ -637,6 +644,39 @@ function clearDuplicateFieldStates() {
   setDuplicateFieldState(noteMeaning, noteMeaningDuplicateMessage, "");
 }
 
+function getDuplicateValueFromMessage(message) {
+  if (!message) return "";
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("duplicate word") || normalized.includes("word:")) {
+    const match = message.match(/(?:duplicate word|word):\s*["']?([^"']+)/i);
+    if (match && match[1]) return match[1].trim();
+  }
+
+  if (normalized.includes("duplicate meaning") || normalized.includes("meaning:")) {
+    const match = message.match(/(?:duplicate meaning|meaning):\s*["']?([^"']+)/i);
+    if (match && match[1]) return match[1].trim();
+  }
+
+  return "";
+}
+
+function buildDuplicateOverridePrompt(message) {
+  const duplicateValue = getDuplicateValueFromMessage(message);
+  if (!duplicateValue) {
+    return "This note duplicates an existing word or meaning. Cancel save or save anyway?";
+  }
+
+  const lower = message.toLowerCase();
+  if (lower.includes("word")) {
+    return `This word "${duplicateValue}" already exists. Cancel save or save anyway?`;
+  }
+  if (lower.includes("meaning")) {
+    return `This meaning "${duplicateValue}" already exists. Cancel save or save anyway?`;
+  }
+  return `This value "${duplicateValue}" already exists. Cancel save or save anyway?`;
+}
+
 noteWord.addEventListener("input", () => {
   setDuplicateFieldState(noteWord, noteWordDuplicateMessage, "");
 });
@@ -659,6 +699,23 @@ document.querySelectorAll('input[name="noteEntryMode"]').forEach((input) => {
 });
 bulkWithHeader.addEventListener("change", renderBulkCsvPreview);
 bulkCsvInput.addEventListener("input", renderBulkCsvPreview);
+
+// if hit Enter key, save the node (shift + Enter for new line)
+noteForm.addEventListener("keydown", (event) => {
+  const target = event.target;
+  const isSaveKey = event.key === "Enter" && !event.shiftKey;
+  const isTextArea = target instanceof HTMLElement && target.tagName === "TEXTAREA";
+
+  if (isSaveKey && modalSubmit) {
+    event.preventDefault();
+    modalSubmit.click();
+    return;
+  }
+
+  if (event.key === "Enter" && event.shiftKey && isTextArea) {
+    return;
+  }
+});
 
 noteForm.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -686,7 +743,12 @@ noteForm.addEventListener("submit", async (e) => {
     } catch (error) {
       const message = error.message || "This bulk import could not be saved.";
       if (message.toLowerCase().includes("duplicate") || message.toLowerCase().includes("word") || message.toLowerCase().includes("meaning")) {
-        const shouldSaveAnyway = window.confirm("This import contains duplicate words or meanings. Cancel import or save anyway?");
+        const duplicateValue = getDuplicateValueFromMessage(message);
+        const shouldSaveAnyway = window.confirm(
+          duplicateValue
+            ? `This import contains a duplicate value ("${duplicateValue}"). Cancel import or save anyway?`
+            : "This import contains duplicate words or meanings. Cancel import or save anyway?"
+        );
         if (!shouldSaveAnyway) {
           return;
         }
@@ -720,6 +782,12 @@ noteForm.addEventListener("submit", async (e) => {
     state.selectedCategoryId = selectedCategoryId;
   }
 
+  const normalizedTags = noteTags.value
+    .split(/[\s,]+/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .join(", ");
+
   const payload = {
     word: noteWord.value.trim(),
     meaning: meaningValue,
@@ -727,7 +795,7 @@ noteForm.addEventListener("submit", async (e) => {
     ...(noteDate ? { note_date: noteDate.value } : {}),
     priority: notePriority.value,
     color: noteColor.value,
-    tags: noteTags.value.trim(),
+    tags: normalizedTags,
     category_id: selectedCategoryId,
     sub_category_id: noteSubCategory.value ? parseInt(noteSubCategory.value) : null,
   };
@@ -743,7 +811,7 @@ noteForm.addEventListener("submit", async (e) => {
   } catch (error) {
     const message = error.message || "This note could not be saved.";
     if (message.toLowerCase().includes("word") || message.toLowerCase().includes("meaning")) {
-      const shouldSaveAnyway = window.confirm("This note duplicates an existing word or meaning. Cancel save or save anyway?");
+      const shouldSaveAnyway = window.confirm(buildDuplicateOverridePrompt(message));
       if (!shouldSaveAnyway) {
         if (message.toLowerCase().includes("word")) {
           setDuplicateFieldState(noteWord, noteWordDuplicateMessage, "This word already exists. Please choose a different one.");

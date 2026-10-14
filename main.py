@@ -1,6 +1,7 @@
 import csv
 import io
 import os
+import re
 import shutil
 import tempfile
 import unicodedata
@@ -189,6 +190,17 @@ def _normalize_duplicate_value(value: Optional[str]) -> str:
     return "".join(ch for ch in normalized if not unicodedata.combining(ch))
 
 
+def _normalize_tags_value(value: Optional[str]) -> Optional[str]:
+    raw = (value or "").strip()
+    if not raw:
+        return None
+
+    normalized_parts = [part.strip() for part in re.split(r"[\s,]+", raw) if part.strip()]
+    if not normalized_parts:
+        return None
+    return ", ".join(normalized_parts)
+
+
 def _find_duplicate_note(db: Session, *, field_name: str, value: Optional[str], note_id: Optional[int] = None):
     key = _normalize_duplicate_value(value)
     if not key:
@@ -229,6 +241,7 @@ def create_note(payload: NoteCreate, db: Session = Depends(get_db)):
     data["word"] = (data.get("word") or "").strip()
     data["meaning"] = (data.get("meaning") or "").strip()
     data["context"] = (data.get("context") or "").strip()
+    data["tags"] = _normalize_tags_value(data.get("tags"))
     data["note_date"] = data.get("note_date") or date.today()
 
     if not ignore_duplicate:
@@ -284,7 +297,7 @@ def _normalize_bulk_row(row: dict) -> dict:
         or normalized.get("example")
         or ""
     )
-    tags = normalized.get("category") or normalized.get("tags") or ""
+    tags = _normalize_tags_value(normalized.get("category") or normalized.get("tags") or "") or ""
     created_time = (
         normalized.get("created time")
         or normalized.get("created_time")
@@ -419,6 +432,8 @@ def update_note(note_id: int, payload: NoteUpdate, db: Session = Depends(get_db)
         update_data["meaning"] = (update_data["meaning"] or "").strip()
     if "context" in update_data:
         update_data["context"] = (update_data["context"] or "").strip()
+    if "tags" in update_data:
+        update_data["tags"] = _normalize_tags_value(update_data.get("tags"))
 
     if not ignore_duplicate:
         _ensure_unique_note_values(
