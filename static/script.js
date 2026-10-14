@@ -672,11 +672,28 @@ noteForm.addEventListener("submit", async (e) => {
       return;
     }
 
+    const bulkPayload = { csv: csvText, with_header: bulkWithHeader.checked };
+
     try {
-      await api.post("/api/notes/bulk", { csv: csvText, with_header: bulkWithHeader.checked });
+      await api.post("/api/notes/bulk", bulkPayload);
     } catch (error) {
-      alert(error.message);
-      return;
+      const message = error.message || "This bulk import could not be saved.";
+      if (message.toLowerCase().includes("duplicate") || message.toLowerCase().includes("word") || message.toLowerCase().includes("meaning")) {
+        const shouldSaveAnyway = window.confirm("This import contains duplicate words or meanings. Cancel import or save anyway?");
+        if (!shouldSaveAnyway) {
+          return;
+        }
+
+        try {
+          await api.post("/api/notes/bulk", { ...bulkPayload, ignore_duplicate: true });
+        } catch (overrideError) {
+          alert(overrideError.message || "This bulk import could not be saved.");
+          return;
+        }
+      } else {
+        alert(message);
+        return;
+      }
     }
 
     state.selectedCategoryId = null;
@@ -718,18 +735,37 @@ noteForm.addEventListener("submit", async (e) => {
     }
   } catch (error) {
     const message = error.message || "This note could not be saved.";
-    if (message.toLowerCase().includes("word")) {
-      setDuplicateFieldState(noteWord, noteWordDuplicateMessage, "This word already exists. Please choose a different one.");
-      noteWord.focus();
+    if (message.toLowerCase().includes("word") || message.toLowerCase().includes("meaning")) {
+      const shouldSaveAnyway = window.confirm("This note duplicates an existing word or meaning. Cancel save or save anyway?");
+      if (!shouldSaveAnyway) {
+        if (message.toLowerCase().includes("word")) {
+          setDuplicateFieldState(noteWord, noteWordDuplicateMessage, "This word already exists. Please choose a different one.");
+          noteWord.focus();
+        }
+        if (message.toLowerCase().includes("meaning")) {
+          setDuplicateFieldState(noteMeaning, noteMeaningDuplicateMessage, "This meaning already exists. Please choose a different one.");
+          noteMeaning.focus();
+        }
+        return;
+      }
+
+      const overridePayload = { ...payload, ignore_duplicate: true };
+      try {
+        if (id) {
+          await api.put(`/api/notes/${id}`, overridePayload);
+        } else {
+          const created = await api.post("/api/notes", overridePayload);
+          noteId.value = created.id;
+        }
+      } catch (overrideError) {
+        const overrideMessage = overrideError.message || "This note could not be saved.";
+        alert(overrideMessage);
+        return;
+      }
+    } else {
+      alert(message);
       return;
     }
-    if (message.toLowerCase().includes("meaning")) {
-      setDuplicateFieldState(noteMeaning, noteMeaningDuplicateMessage, "This meaning already exists. Please choose a different one.");
-      noteMeaning.focus();
-      return;
-    }
-    alert(message);
-    return;
   }
 
   state.selectedCategoryId = null;

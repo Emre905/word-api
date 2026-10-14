@@ -3,6 +3,7 @@ import io
 import os
 import shutil
 import tempfile
+import unicodedata
 from datetime import date, datetime
 from pathlib import Path
 from typing import List, Optional
@@ -11,7 +12,6 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request,
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import DATA_DIR, DATABASE_URL, Base, engine, get_db
@@ -182,7 +182,23 @@ def list_notes(
 
 
 def _normalize_duplicate_value(value: Optional[str]) -> str:
-    return (value or "").strip().casefold()
+    text = (value or "").strip()
+    if not text:
+        return ""
+    normalized = unicodedata.normalize("NFKD", text.casefold())
+    return "".join(ch for ch in normalized if not unicodedata.combining(ch))
+
+
+def _find_duplicate_note(db: Session, *, field_name: str, value: Optional[str], note_id: Optional[int] = None):
+    key = _normalize_duplicate_value(value)
+    if not key:
+        return None
+
+    for existing_note in db.query(Note).filter(Note.id != note_id).all():
+        existing_value = getattr(existing_note, field_name)
+        if _normalize_duplicate_value(existing_value) == key:
+            return existing_note
+    return None
 
 
 def _ensure_unique_note_values(
@@ -196,20 +212,12 @@ def _ensure_unique_note_values(
     meaning_key = _normalize_duplicate_value(meaning)
 
     if word_key:
-        duplicate = (
-            db.query(Note)
-            .filter(Note.id != note_id, func.lower(Note.word) == word_key)
-            .first()
-        )
+        duplicate = _find_duplicate_note(db, field_name="word", value=word, note_id=note_id)
         if duplicate:
             raise HTTPException(409, f"Duplicate word: '{duplicate.word}' already exists.")
 
     if meaning_key:
-        duplicate = (
-            db.query(Note)
-            .filter(Note.id != note_id, func.lower(Note.meaning) == meaning_key)
-            .first()
-        )
+        duplicate = _find_duplicate_note(db, field_name="meaning", value=meaning, note_id=note_id)
         if duplicate:
             raise HTTPException(409, f"Duplicate meaning: '{duplicate.meaning}' already exists.")
 
@@ -217,12 +225,14 @@ def _ensure_unique_note_values(
 @app.post("/api/notes", response_model=NoteResponse, status_code=201)
 def create_note(payload: NoteCreate, db: Session = Depends(get_db)):
     data = payload.model_dump()
+    ignore_duplicate = bool(data.pop("ignore_duplicate", False))
     data["word"] = (data.get("word") or "").strip()
     data["meaning"] = (data.get("meaning") or "").strip()
     data["context"] = (data.get("context") or "").strip()
     data["note_date"] = data.get("note_date") or date.today()
 
-    _ensure_unique_note_values(db, word=data["word"], meaning=data["meaning"])
+    if not ignore_duplicate:
+        _ensure_unique_note_values(db, word=data["word"], meaning=data["meaning"])
 
     note = Note(**data)
     db.add(note)
@@ -343,6 +353,7 @@ def create_notes_bulk(payload: BulkNotesCreate, db: Session = Depends(get_db)):
     created_notes = []
     seen_words = set()
     seen_meanings = set()
+    ignore_duplicate = bool(payload.ignore_duplicate)
 
     for row_number, parsed in enumerate(parsed_rows, start=1):
         word = (parsed.get("word") or "").strip()
@@ -357,12 +368,13 @@ def create_notes_bulk(payload: BulkNotesCreate, db: Session = Depends(get_db)):
 
         word_key = _normalize_duplicate_value(word)
         meaning_key = _normalize_duplicate_value(meaning)
-        if word_key in seen_words:
-            raise HTTPException(409, f"Row {row_number}: duplicate word '{word}' in the CSV upload.")
-        if meaning_key in seen_meanings:
-            raise HTTPException(409, f"Row {row_number}: duplicate meaning '{meaning}' in the CSV upload.")
+        if not ignore_duplicate:
+            if word_key in seen_words:
+                raise HTTPException(409, f"Row {row_number}: duplicate word '{word}' in the CSV upload.")
+            if meaning_key in seen_meanings:
+                raise HTTPException(409, f"Row {row_number}: duplicate meaning '{meaning}' in the CSV upload.")
 
-        _ensure_unique_note_values(db, word=word, meaning=meaning)
+            _ensure_unique_note_values(db, word=word, meaning=meaning)
 
         seen_words.add(word_key)
         seen_meanings.add(meaning_key)
@@ -400,6 +412,7 @@ def update_note(note_id: int, payload: NoteUpdate, db: Session = Depends(get_db)
         raise HTTPException(404, "Note not found")
 
     update_data = payload.model_dump(exclude_unset=True)
+    ignore_duplicate = bool(update_data.pop("ignore_duplicate", False))
     if "word" in update_data:
         update_data["word"] = (update_data["word"] or "").strip()
     if "meaning" in update_data:
@@ -407,12 +420,13 @@ def update_note(note_id: int, payload: NoteUpdate, db: Session = Depends(get_db)
     if "context" in update_data:
         update_data["context"] = (update_data["context"] or "").strip()
 
-    _ensure_unique_note_values(
-        db,
-        word=update_data.get("word", note.word),
-        meaning=update_data.get("meaning", note.meaning),
-        note_id=note.id,
-    )
+    if not ignore_duplicate:
+        _ensure_unique_note_values(
+            db,
+            word=update_data.get("word", note.word),
+            meaning=update_data.get("meaning", note.meaning),
+            note_id=note.id,
+        )
 
     for field, value in update_data.items():
         setattr(note, field, value)

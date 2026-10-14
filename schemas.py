@@ -65,6 +65,7 @@ class NoteBase(BaseModel):
     category_id: Optional[int] = None
     sub_category_id: Optional[int] = None
     note_date: Optional[date] = None
+    ignore_duplicate: bool = False
 
     @field_validator("note_date", mode="before")
     @classmethod
@@ -88,6 +89,7 @@ class NoteCreate(NoteBase):
 class BulkNotesCreate(BaseModel):
     csv: str
     with_header: bool = True
+    ignore_duplicate: bool = False
 
 
 class NoteUpdate(BaseModel):
@@ -100,6 +102,7 @@ class NoteUpdate(BaseModel):
     category_id: Optional[int] = None
     sub_category_id: Optional[int] = None
     note_date: Optional[date] = None
+    ignore_duplicate: bool = False
 
     @field_validator("note_date", mode="before")
     @classmethod

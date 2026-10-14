@@ -117,3 +117,53 @@ def test_duplicate_word_or_meaning_is_rejected_case_insensitively():
     duplicate_meaning = client.post("/api/notes", json={"word": "Salut", "meaning": " bonjour "})
     assert duplicate_meaning.status_code == 409, duplicate_meaning.text
     assert "meaning" in duplicate_meaning.json()["detail"].lower()
+
+
+def test_duplicate_word_is_rejected_when_equivalent_lithuanian_vowels_are_used():
+    main.Base.metadata.drop_all(bind=main.engine)
+    main.Base.metadata.create_all(bind=main.engine)
+
+    first = client.post("/api/notes", json={"word": "e", "meaning": "one"})
+    assert first.status_code == 201, first.text
+
+    duplicate_word = client.post("/api/notes", json={"word": "ė", "meaning": "two"})
+    assert duplicate_word.status_code == 409, duplicate_word.text
+    assert "word" in duplicate_word.json()["detail"].lower()
+
+    duplicate_word_2 = client.post("/api/notes", json={"word": "ę", "meaning": "three"})
+    assert duplicate_word_2.status_code == 409, duplicate_word_2.text
+    assert "word" in duplicate_word_2.json()["detail"].lower()
+
+
+def test_duplicate_note_can_be_saved_when_explicitly_approved():
+    main.Base.metadata.drop_all(bind=main.engine)
+    main.Base.metadata.create_all(bind=main.engine)
+
+    first = client.post("/api/notes", json={"word": "Hello", "meaning": "bonjour"})
+    assert first.status_code == 201, first.text
+
+    override = client.post(
+        "/api/notes",
+        json={"word": "hello", "meaning": "bonjour", "ignore_duplicate": True},
+    )
+    assert override.status_code == 201, override.text
+    assert override.json()["word"] == "hello"
+
+
+def test_bulk_import_can_be_saved_when_duplicate_rows_are_explicitly_approved():
+    main.Base.metadata.drop_all(bind=main.engine)
+    main.Base.metadata.create_all(bind=main.engine)
+
+    first = client.post("/api/notes", json={"word": "tėra", "meaning": "is enough"})
+    assert first.status_code == 201, first.text
+
+    csv_payload = """tėra,already enough,context one
+                  tėra,another value,context two
+                  """
+    response = client.post(
+        "/api/notes/bulk",
+        json={"csv": csv_payload, "with_header": False, "ignore_duplicate": True},
+    )
+
+    assert response.status_code == 201, response.text
+    assert len(response.json()) == 2

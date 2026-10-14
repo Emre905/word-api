@@ -2,7 +2,7 @@ import os
 
 from sqlalchemy import (
     Column, Integer, String, Text, Date, DateTime,
-    ForeignKey, Enum as SQLEnum, UniqueConstraint,
+    ForeignKey, Enum as SQLEnum,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -40,10 +40,6 @@ class SubCategory(Base):
 
 class Note(Base):
     __tablename__ = "notes"
-    __table_args__ = (
-        UniqueConstraint("word", name="uq_notes_word"),
-        UniqueConstraint("meaning", name="uq_notes_meaning"),
-    )
 
     id = Column(Integer, primary_key=True, index=True)
     word = Column(String(200), nullable=False)
