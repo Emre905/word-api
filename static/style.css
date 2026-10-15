@@ -91,7 +91,6 @@ body {
   left: 0.5rem;
   bottom: 0.5rem;
   border-radius: 0.5rem;
-  overflow: hidden;
   box-shadow: 2px 0 12px rgba(0,0,0,.15);
   transition: width .2s ease-in-out, opacity .2s ease-in-out;
   z-index: 50;
@@ -817,8 +816,11 @@ body {
 .note-card .card-actions button:hover { background: var(--surface-hover); color: var(--text-primary); }
 .note-card .card-actions .edit-card:hover { color: #0891b2; }
 .note-card .card-actions .delete-card:hover { color: var(--danger); }
-.table-wrap {
-  overflow-x: auto;
+@media (min-width: 769px) {
+  .table-wrap {
+    overflow: auto;
+    max-height: 85vh;
+  }
 }
 
 .notes-table {
@@ -834,7 +836,16 @@ body {
   background: var(--surface-hover);
 }
 
+.notes-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
 .notes-table th {
+  position: relative;
   text-align: left;
   padding: .7rem .8rem;
   font-size: .75rem;
@@ -844,6 +855,43 @@ body {
   font-weight: 999;
   white-space: nowrap;
   border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+.notes-table-wrapper {
+  position: relative;
+}
+
+.notes-table th .column-resizer {
+  position: absolute;
+  top: 0;
+  right: -1px;
+  width: 1px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+.notes-table th .column-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--border);
+  pointer-events: none;
+}
+
+.notes-table th .column-resizer:hover::after {
+  background: var(--accent);
+  width: 2px;
+}
+
+/* column borders (on rows) */
+.notes-table th:not(:last-child),
+.notes-table td:not(:last-child) {
+  border-right: 1px solid var(--border);
 }
 
 .notes-table td {

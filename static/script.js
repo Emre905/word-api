@@ -307,6 +307,79 @@ function renderNotes() {
   else renderNotesCards();
 }
 
+function initResizableTable() {
+  const table = document.getElementById("notesTable");
+  if (!table || table.dataset.resizable === "true") return;
+
+  table.dataset.resizable = "true";
+  const headers = [...table.querySelectorAll("thead th")];
+  const wrapper = table.parentElement;
+  wrapper.style.position = "relative";
+
+  let indicator = wrapper.querySelector(".column-resize-indicator");
+  if (!indicator) {
+    indicator = document.createElement("div");
+    indicator.className = "column-resize-indicator";
+    Object.assign(indicator.style, {
+      position: "absolute",
+      top: "0",
+      width: "2px",
+      display: "none",
+      pointerEvents: "none",
+      zIndex: "10",
+      background: "var(--accent)",
+    });
+    wrapper.appendChild(indicator);
+  }
+
+  headers.forEach((header) => {
+    if (header.querySelector(".column-resizer")) return;
+
+    const resizer = document.createElement("div");
+    resizer.className = "column-resizer";
+    header.appendChild(resizer);
+
+    resizer.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const startX = event.clientX;
+      const startWidth = header.getBoundingClientRect().width;
+      const columnIndex = headers.indexOf(header);
+      const tableRect = table.getBoundingClientRect();
+      const wrapperRect = wrapper.getBoundingClientRect();
+
+      indicator.style.left = `${startX - wrapperRect.left + wrapper.scrollLeft}px`;
+      indicator.style.top = `${tableRect.top - wrapperRect.top + wrapper.scrollTop}px`;
+      indicator.style.height = `${tableRect.height}px`;
+      indicator.style.display = "block";
+
+      const onMove = (moveEvent) => {
+        const nextWidth = Math.max(80, startWidth + (moveEvent.clientX - startX));
+        header.style.width = `${nextWidth}px`;
+        indicator.style.left = `${moveEvent.clientX - wrapper.getBoundingClientRect().left + wrapper.scrollLeft}px`;
+
+        const rows = table.querySelectorAll("tbody tr");
+        rows.forEach((row) => {
+          const cell = row.children[columnIndex];
+          if (cell) cell.style.width = `${nextWidth}px`;
+        });
+      };
+
+      const onUp = () => {
+        indicator.style.display = "none";
+        document.removeEventListener("pointermove", onMove);
+        document.removeEventListener("pointerup", onUp);
+        document.body.style.userSelect = "";
+      };
+
+      document.body.style.userSelect = "none";
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onUp);
+    });
+  });
+}
+
 function formatDisplayDate(value) {
   if (!value) return "—";
   const text = String(value).split("T")[0];
@@ -335,10 +408,12 @@ function renderNotesTable() {
       <td class="td-word">${esc(n.word)}</td>
       <td class="td-meaning">${esc(n.meaning)}</td>
       <td class="td-context">${esc(preview)}${n.context.length > 120 ? "…" : ""}</td>
-      <td class="td-tags">${tags || "—"}</td>
+      <td class="td-tags">${tags}</td>
       <td class="td-date">${formatDisplayDate(n.note_date)}</td>
     </tr>`;
   }).join("");
+
+  initResizableTable();
 
   notesBody.querySelectorAll("tr[data-id]").forEach((row) => {
     const id = parseInt(row.dataset.id);
@@ -370,7 +445,7 @@ function renderNotesCards() {
       <div class="card-preview">${esc(preview)}</div>
       <div class="card-meta">
         <span class="date">${formatDisplayDate(n.note_date)}</span>
-        ${tags}
+        ${tags || ""}
         <div class="card-actions">
           <button class="edit-card" title="Edit">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

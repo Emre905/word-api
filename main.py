@@ -135,6 +135,7 @@ async def log_request_details(request: Request, call_next):
                     logger.info(
                         # log the note details in a single line
                         f"{datetime.utcnow().isoformat(timespec='seconds')} "
+                        f"client_name={_resolve_client_name(client_ip)} "
                         f"saved_note={summary}"
                     )
 
