@@ -3,7 +3,10 @@ __pycache__
 *.pyc
 .git
 .gitignore
+.venv
+.vscode
+*.db
 README.md
-screenshots
 init_db.sql
 uv.lock
+*.log

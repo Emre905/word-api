@@ -59,6 +59,12 @@ export DATABASE_URL="sqlite:///path/to/custom.db"
 uvicorn main:app --reload
 ```
 
+### 4.a Run app with docker:
+```bash
+docker run --name notes-app -p 8000:8000 my-app:final
+docker cp notes-app:/app/logs/client_access.log ./client_access.log # example to copy logs to current directory
+```
+
 Open [http://localhost:8000](http://localhost:8000) in your browser.
 
 ### 5. API documentation
