@@ -1,10 +1,14 @@
 import csv
 import io
+import json
+import logging
 import os
 import re
 import shutil
+import socket
 import tempfile
 import unicodedata
+from collections import defaultdict
 from datetime import date, datetime
 from pathlib import Path
 from typing import List, Optional
@@ -31,6 +35,110 @@ from schemas import (
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Notes App")
+logger = logging.getLogger("notes-access")
+logger.setLevel(logging.INFO)
+logger.propagate = False
+if not logger.handlers:
+    log_path = os.path.join("logs", "client_access.log")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    handler = logging.FileHandler(log_path, encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    logger.addHandler(handler)
+
+_daily_seen_clients = defaultdict(set)
+
+
+def _summarize_note_payload(payload):
+    rows = []
+
+    if isinstance(payload, dict):
+        if "csv" in payload:
+            csv_text = (payload.get("csv") or "").strip()
+            if csv_text:
+                try:
+                    parsed_rows = _parse_bulk_csv(csv_text, bool(payload.get("with_header", False)))
+                    rows = [
+                        [row.get("word") or "", row.get("meaning") or ""]
+                        for row in parsed_rows
+                        if (row.get("word") or row.get("meaning"))
+                    ]
+                except HTTPException:
+                    rows = [["", ""]]
+        else:
+            rows = [[payload.get("word") or "", payload.get("meaning") or ""]]
+    elif isinstance(payload, list):
+        rows = [
+            [item.get("word") or "", item.get("meaning") or ""]
+            for item in payload
+            if isinstance(item, dict) and (item.get("word") or item.get("meaning"))
+        ]
+
+    if not rows:
+        return ""
+
+    csv_buffer = io.StringIO()
+    writer = csv.writer(csv_buffer, lineterminator="\n")
+    writer.writerows(rows)
+    return csv_buffer.getvalue().strip().replace("\n", "\\n")
+
+
+def _resolve_client_name(ip: Optional[str]) -> str:
+    if not ip or ip in {"unknown", "127.0.0.1", "::1"}:
+        return "localhost"
+    try:
+        # get the hostname for the given IP address to log
+        host, _, _ = socket.gethostbyaddr(ip)
+        return host
+    except (socket.herror, socket.gaierror, OSError):
+        return "unknown"
+
+
+def _log_access(event: str, client_ip: str, path: str, method: str, status_code: Optional[int] = None):
+    client_name = _resolve_client_name(client_ip)
+    message = (
+        f"{datetime.utcnow().isoformat(timespec='seconds')} "
+        f"event={event} client_ip={client_ip} client_name={client_name} method={method} path={path}"
+    )
+    if status_code is not None:
+        message += f" status={status_code}"
+    logger.info(message)
+
+
+@app.middleware("http")
+async def log_request_details(request: Request, call_next):
+    client_ip = request.client.host if request.client else "unknown"
+    body = await request.body()
+    request._body = body
+    response = await call_next(request)
+
+    # Log first-time access to the root path and note creation/update events
+    if request.method == "GET" and request.url.path == "/" and response.status_code == 200:
+        today = date.today().isoformat()
+        if client_ip not in _daily_seen_clients[today]:
+            _daily_seen_clients[today].add(client_ip)
+            _log_access("first_open", client_ip, request.url.path, request.method, response.status_code)
+
+    if request.url.path.startswith("/api/notes") and request.method in {"POST", "PUT"} and response.status_code in {200, 201}:
+        _log_access("note_saved", client_ip, request.url.path, request.method, response.status_code)
+
+        if body:
+            # Attempt to parse the request body as JSON to log note details
+            try:
+                payload = json.loads(body.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                payload = None
+
+            if payload is not None:
+                summary = _summarize_note_payload(payload)
+                if summary:
+                    logger.info(
+                        # log the note details in a single line
+                        f"{datetime.utcnow().isoformat(timespec='seconds')} "
+                        f"saved_note={summary}"
+                    )
+
+    return response
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
