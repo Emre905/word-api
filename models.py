@@ -45,10 +45,6 @@ class Note(Base):
     word = Column(String(200), nullable=False)
     meaning = Column(String(200), nullable=False)
     context = Column(Text, nullable=False)
-    priority = Column(
-        SQLEnum("low", "medium", "high", name="priorityenum", create_type=False),
-        default="medium",
-    )
     tags = Column(String(500), nullable=True)
     color = Column(String(7), nullable=True)
     category_id = Column(

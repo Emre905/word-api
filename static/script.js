@@ -23,7 +23,6 @@ const emptyState = $("#emptyState");
 const tableView = $("#tableView");
 const cardsView = $("#cardsView");
 const searchInput = $("#searchInput");
-const priorityFilter = $("#priorityFilter");
 const themeToggle = $("#themeToggle");
 const viewBtns = $$(".view-btn");
 const newNoteBtn = $("#newNoteBtn");
@@ -46,7 +45,6 @@ const noteWordDuplicateMessage = $("#noteWordDuplicateMessage");
 const noteMeaningDuplicateMessage = $("#noteMeaningDuplicateMessage");
 const noteCategory = $("#noteCategory");
 const noteSubCategory = $("#noteSubCategory");
-const notePriority = $("#notePriority");
 const noteDate = $("#noteDate");
 const noteColor = $("#noteColor");
 const noteTags = $("#noteTags");
@@ -182,7 +180,6 @@ allNotesSection.addEventListener("click", () => {
   state.selectedCategoryId = null;
   state.selectedSubCategoryId = null;
   searchInput.value = "";
-  priorityFilter.value = "";
   renderCategories();
   loadSubCategories();
   loadNotes();
@@ -298,7 +295,6 @@ async function loadNotes() {
   const params = new URLSearchParams();
   if (state.selectedCategoryId) params.set("category_id", state.selectedCategoryId);
   if (state.selectedSubCategoryId) params.set("sub_category_id", state.selectedSubCategoryId);
-  if (priorityFilter.value) params.set("priority", priorityFilter.value);
   if (searchInput.value.trim()) params.set("search", searchInput.value.trim());
   state.notes = await api.get(`/api/notes?${params}`);
   renderNotes();
@@ -324,12 +320,9 @@ function renderNotesTable() {
   if (!hasNotes) { notesBody.innerHTML = ""; return; }
 
   notesBody.innerHTML = state.notes.map((n) => {
-    const cat = state.categories.find((c) => c.id === n.category_id);
-    const sub = state.subCategories.find((s) => s.id === n.sub_category_id);
-    const catSub = [cat?.name, sub?.name].filter(Boolean).join(" / ") || "—";
     const preview = n.context.replace(/<[^>]*>/g, "").substring(0, 120);
     const tags = (n.tags || "").split(",").filter(Boolean).map((t) => `<span class="tag">${esc(t.trim())}</span>`).join("");
-    return `<tr class="priority-${n.priority}" data-id="${n.id}" data-title="${esc(n.word)}">
+    return `<tr data-id="${n.id}" data-title="${esc(n.word)}">
       <td class="td-actions">
         <button class="edit-note" title="Edit">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -342,10 +335,8 @@ function renderNotesTable() {
       <td class="td-word">${esc(n.word)}</td>
       <td class="td-meaning">${esc(n.meaning)}</td>
       <td class="td-context">${esc(preview)}${n.context.length > 120 ? "…" : ""}</td>
-      <td class="td-cat">${esc(catSub)}</td>
-      <td class="td-priority"><span class="priority-badge">${n.priority}</span></td>
-      <td class="td-date">${formatDisplayDate(n.note_date)}</td>
       <td class="td-tags">${tags || "—"}</td>
+      <td class="td-date">${formatDisplayDate(n.note_date)}</td>
     </tr>`;
   }).join("");
 
@@ -371,15 +362,13 @@ function renderNotesCards() {
   if (!hasNotes) return;
 
   notesGrid.innerHTML = state.notes.map((n) => {
-    const pClass = `priority-${n.priority}`;
     const preview = n.context.replace(/<[^>]*>/g, "").substring(0, 150);
     const tags = (n.tags || "").split(",").filter(Boolean).map((t) => `<span class="tag">${esc(t.trim())}</span>`).join("");
-    return `<div class="note-card ${pClass}" data-id="${n.id}" style="border-left:3px solid ${n.color || 'transparent'}">
+    return `<div class="note-card" data-id="${n.id}" style="border-left:3px solid ${n.color || 'transparent'}">
       <div class="card-word">${esc(n.word)}</div>
       <div class="card-meaning">${esc(n.meaning)}</div>
       <div class="card-preview">${esc(preview)}</div>
       <div class="card-meta">
-        <span class="priority-badge">${n.priority}</span>
         <span class="date">${formatDisplayDate(n.note_date)}</span>
         ${tags}
         <div class="card-actions">
@@ -533,7 +522,6 @@ async function openNoteModal(id = null) {
   modalWord.textContent = "New Note";
   if (noteDate) {noteDate.value = new Date().toISOString().split("T")[0];}
   noteColor.value = "#4f46e5";
-  notePriority.value = "medium";
   setNoteEntryMode("single");
 
   if (id) {
@@ -545,7 +533,6 @@ async function openNoteModal(id = null) {
     noteCategory.value = note.category_id || "";
     await populateSubCategoryDropdown(note.category_id);
     noteSubCategory.value = note.sub_category_id || "";
-    notePriority.value = note.priority;
     if (noteDate) {noteDate.value = note.note_date;}
     noteColor.value = note.color || "#4f46e5";
     noteTags.value = note.tags || "";
@@ -793,7 +780,6 @@ noteForm.addEventListener("submit", async (e) => {
     meaning: meaningValue,
     context: noteText.value.trim(),
     ...(noteDate ? { note_date: noteDate.value } : {}),
-    priority: notePriority.value,
     color: noteColor.value,
     tags: normalizedTags,
     category_id: selectedCategoryId,
@@ -953,7 +939,6 @@ async function populateSubCategoryDropdown(categoryId) {
 
 /* ── Filters ───────────────────────────────────────────────────────────────── */
 searchInput.addEventListener("input", debounce(loadNotes, 300));
-priorityFilter.addEventListener("change", loadNotes);
 
 newNoteBtn.addEventListener("click", () => openNoteModal());
 

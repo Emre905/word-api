@@ -1,16 +1,9 @@
 from __future__ import annotations
 
-import enum
 from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, field_validator
-
-
-class PriorityEnum(str, enum.Enum):
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
 
 
 # ── Category ─────────────────────────────────────────────────────────────────
@@ -59,7 +52,6 @@ class NoteBase(BaseModel):
     word: str
     meaning: str
     context: Optional[str] = ""
-    priority: PriorityEnum = PriorityEnum.MEDIUM
     tags: Optional[str] = None
     color: Optional[str] = None
     category_id: Optional[int] = None
@@ -96,7 +88,6 @@ class NoteUpdate(BaseModel):
     word: Optional[str] = None
     meaning: Optional[str] = None
     context: Optional[str] = None
-    priority: Optional[PriorityEnum] = None
     tags: Optional[str] = None
     color: Optional[str] = None
     category_id: Optional[int] = None

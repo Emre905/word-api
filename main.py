@@ -17,6 +17,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request,
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database import DATA_DIR, DATABASE_URL, Base, engine, get_db
@@ -268,7 +269,6 @@ def delete_sub_category(sub_category_id: int, db: Session = Depends(get_db)):
 def list_notes(
     category_id: Optional[int] = Query(None),
     sub_category_id: Optional[int] = Query(None),
-    priority: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
@@ -277,8 +277,6 @@ def list_notes(
         q = q.filter(Note.category_id == category_id)
     if sub_category_id is not None:
         q = q.filter(Note.sub_category_id == sub_category_id)
-    if priority:
-        q = q.filter(Note.priority == priority)
     if search:
         pattern = f"%{search}%"
         q = q.filter(
@@ -506,7 +504,6 @@ def create_notes_bulk(payload: BulkNotesCreate, db: Session = Depends(get_db)):
             context=context,
             tags=(parsed.get("tags") or "").strip() or None,
             note_date=parsed.get("note_date") or date.today(),
-            priority="medium",
             color="#4f46e5",
         )
         db.add(note)
