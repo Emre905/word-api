@@ -60,8 +60,11 @@ uvicorn main:app --reload
 ```
 
 ### 4.a Run app with docker:
+
+Inside project root, run
 ```bash
-docker run --name notes-app -p 8000:8000 my-app:final
+docker build -t my-app:final . 
+docker run -d --name notes-app -p 8000:8000 my-app:final
 docker cp notes-app:/app/logs/client_access.log ./client_access.log # example to copy logs to current directory
 ```
 

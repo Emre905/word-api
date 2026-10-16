@@ -17,3 +17,5 @@ data/test_notes_app.db
 
 # Logs
 logs/
+
+notes.md
