@@ -59,13 +59,28 @@ export DATABASE_URL="sqlite:///path/to/custom.db"
 uvicorn main:app --reload
 ```
 
-### 4.a Run app with docker:
+### 5 Run app with docker:
 
 Inside project root, run
 ```bash
 docker build -t my-app:final . 
 docker run -d --name notes-app -p 8000:8000 my-app:final
+```
+
+#### Initial set-up to ssh into another server and control docker
+
+```bash
+docker context create mybox --docker "host=ssh://<user>@<ip>"
+docker context use mybox
+
+docker context use default # when done with ssh docker
+```
+
+#### Some commands
+```bash
 docker cp notes-app:/app/logs/client_access.log ./client_access.log # example to copy logs to current directory
+docker exec -it notes-app rm /app/data/notes_app.db # remove db
+docker restart notes-app # restart app after removing db
 ```
 
 Open [http://localhost:8000](http://localhost:8000) in your browser.
